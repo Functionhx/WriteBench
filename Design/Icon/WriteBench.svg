@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+<title>WriteBench — four-stroke W</title>
+<defs>
+<linearGradient id="porcelain" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#FFFFFF"/><stop offset="1" stop-color="#EAF0FB"/></linearGradient>
+<linearGradient id="stroke0" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#6866EE"/><stop offset="1" stop-color="#426BF1"/></linearGradient>
+<linearGradient id="stroke1" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#3E79F9"/><stop offset="1" stop-color="#95BAFF"/></linearGradient>
+<linearGradient id="stroke2" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#2760EE"/><stop offset="1" stop-color="#5489FF"/></linearGradient>
+<linearGradient id="stroke3" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#A2B5FF"/><stop offset="1" stop-color="#548CF9"/></linearGradient>
+<filter id="plate-shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="14" stdDeviation="11" flood-color="#1D3264" flood-opacity=".19"/></filter>
+<filter id="mark-shadow" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="0" dy="7" stdDeviation="5" flood-color="#26489C" flood-opacity=".15"/></filter>
+</defs>
+<path id="porcelain-base" d="M330 96 H694 C866 96 928 158 928 330 V694 C928 866 866 928 694 928 H330 C158 928 96 866 96 694 V330 C96 158 158 96 330 96Z" fill="url(#porcelain)" stroke="white" stroke-width="2.5" filter="url(#plate-shadow)"/>
+<g id="WriteBench-W" filter="url(#mark-shadow)"><g id="W-stroke-1" transform="translate(308.0 504) rotate(-23.0)"><rect x="-57" y="-198" width="114" height="396" rx="57" fill="url(#stroke0)" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="1.8"/></g>
+<g id="W-stroke-2" transform="translate(444.0 504) rotate(23.0)"><rect x="-57" y="-198" width="114" height="396" rx="57" fill="url(#stroke1)" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="1.8"/></g>
+<g id="W-stroke-3" transform="translate(580.0 504) rotate(-23.0)"><rect x="-57" y="-198" width="114" height="396" rx="57" fill="url(#stroke2)" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="1.8"/></g>
+<g id="W-stroke-4" transform="translate(716.0 504) rotate(23.0)"><rect x="-57" y="-198" width="114" height="396" rx="57" fill="url(#stroke3)" stroke="#FFFFFF" stroke-opacity=".22" stroke-width="1.8"/></g></g>
+</svg>

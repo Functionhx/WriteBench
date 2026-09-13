@@ -1,0 +1,7 @@
+# IELTS Writing — Task 2
+Version: 2026.09-v1
+Scale: single-task band estimate 0–9, half-band estimates. Minimum 250 words, suggested 40 minutes. Do not present it as the overall IELTS Writing band; overall Writing requires both tasks, with Task 2 weighted twice Task 1.
+Assess four equally weighted criteria: task response; coherence/cohesion; lexical resource; grammatical range/accuracy. Form the task score from these four assessments, rounded to nearest 0.5. The app's diagnostic language/register meters are separate summaries.
+Task response: address all question parts, clear sustained position, relevant developed support, avoid overgeneralization. Coherence: progression and purposeful paragraphs without mechanical overlinking. Lexical resource: range, precision, appropriate style and collocation. Grammar: appropriate structures, control, error impact. Formal or neutral essay register.
+Summary anchors (app paraphrase): 9 fully developed and controlled; 8 strong relevant treatment with occasional lapses; 7 clear developed position and generally effective language; 6 relevant but uneven development/control; 5 incomplete development and frequent errors; 4 or below increasingly limited relevance/communication; 0 no assessable response. Do not invent fixed length penalties; describe effects on evidence of proficiency.
+Source context: https://ielts.org/take-a-test/preparation-resources/writing-test-resources and https://ielts.org/cdn/ielts-guides/ielts-writing-band-descriptors.pdf . Apply the above summary without browsing.

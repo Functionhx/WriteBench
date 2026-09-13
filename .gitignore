@@ -1,0 +1,27 @@
+build/
+*.log
+*.xcresult/
+WriteBench.app/
+*.zip
+.DS_Store
+xcuserdata/
+
+# Distribution artifacts and local state
+*.dmg
+*.apk
+*.aab
+*.exe
+*.msix
+*.sha256
+*.store*
+*.keystore
+*.jks
+.env*
+.local-build/
+release/
+.gradle/
+local.properties
+**/bin/
+**/obj/
+**/build/
+Documentation/codex-live-check.json
