@@ -1,4 +1,4 @@
-# AI grading providers — 1.3
+# AI grading providers — 1.4
 
 Defaults verified on 2026-09-13:
 
@@ -9,6 +9,18 @@ Defaults verified on 2026-09-13:
 | C | Independent examiner | ChatGPT via official Codex CLI | gpt-6-astra | max |
 
 Each role has its own provider selector. A submission freezes the selected configuration, sends identical original evidence to three independent requests, validates every response and aggregates the median locally. An error identifies the judge and provider. There is no fallback to another provider, partial aggregate, or mock result. Test fixtures are compiled only into WriteBenchTests. Legacy demo reviews remain stored but are hidden from History and excluded from analytics.
+
+## Background lifecycle and structured streaming
+
+`WritingStore` is owned by the application, independently of the current page and immersive editor. Hand-in snapshots the question, essay, duration, images, configuration and optional source-review ID. One grading job may run at a time; another draft can be edited while it runs. Completion, cancellation or failure never restores over that newer draft. Closing the window keeps the app running; explicit quit cancels and awaits the job, including its Codex subprocess.
+
+`GradingCoordinator` uses a throwing task group and reports actual reviewer completions. The progress bar is completed judges / 3, not an estimated token or time percentage. A judge failure cancels remaining requests. Results are persisted only after all three structured responses pass validation. The user explicitly opens the finished review; it never steals focus.
+
+`StreamingEssayGradingService` adds provisional preview events without changing the provider-independent result contract. DeepSeek uses URLSession async bytes and official SSE (`stream: true`). The bounded byte framer supports UTF-8, CRLF and SSE data lines; finalization requires `[DONE]` and `finish_reason: stop`. A small JSON string tokenizer previews only the root `summary` field, including incomplete strings and escaped Unicode. Full JSON decoding, required-field validation and exact correction-span checks still gate every score. Reasoning content is neither decoded nor displayed. This follows the [official DeepSeek streaming format](https://api-docs.deepseek.com/api/create-chat-completion/).
+
+Codex continues to decode its final schema-constrained output file; no token-by-token Codex preview is claimed. Prompt version 1.2 requires `strengths`, `weaknesses` and `improvements` arrays alongside the existing fields. Old saved reviews decode these missing arrays as empty. The overview uses the median-score reviewer's conclusion and locally deduplicates feedback; it makes no extra summarization call.
+
+History groups records at display time by task, normalized exact prompt and question-image digest. It does not mutate old records or infer their ancestry. The optional SwiftData `parentSessionID` records only an explicit rewrite source, captured when submitted. Original essays and previous scores remain immutable. Different diagrams with identical instruction text stay separate.
 
 ## Direct key entry
 

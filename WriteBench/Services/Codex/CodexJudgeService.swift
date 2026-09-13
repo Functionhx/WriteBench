@@ -78,7 +78,7 @@ struct CodexJudgeService: EssayGradingService {
         let result = try await runner.run(ProcessRequest(executable: executable, arguments: arguments(directory: directory), directory: directory, input: Data(prompt.utf8), timeout: 600))
         guard result.status == 0 else { throw CodexError.from(result) }
         let url = directory.appendingPathComponent("response.json")
-        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size < 1_000_000, let data = try? Data(contentsOf: url), let response = try? JSONDecoder().decode(JudgeResponse.self, from: data) else { throw CodexError.malformed }
+        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size < 1_000_000, let data = try? Data(contentsOf: url), let response = try? JudgeResponse.decodeProviderOutput(data) else { throw CodexError.malformed }
         try ScoreAggregator.validate(response, task: input.task)
         guard response.corrections.allSatisfy({ input.essay.contains($0.original) }) else { throw GradingError.invalidResponse("Codex 修改建议引用了原文中不存在的文字") }
         return ReviewerResult(judge: judge, response: response, model: model.isEmpty ? "Codex automatic" : model, timestamp: Date(), provider: .codex, reasoningEffort: reasoning)
@@ -95,7 +95,8 @@ enum JudgeResponseSchema {
                            "category": ["type": "string", "enum": MistakeCategory.allCases.map(\.rawValue)],
                            "severity": ["type": "string", "enum": ["major", "minor"]]]]
         let properties: [String: Any] = ["score": number, "taskCompletion": number, "language": number, "coherence": number, "register": number,
-            "majorErrors": strings, "minorErrors": strings, "summary": string, "corrections": ["type": "array", "items": correction], "improvedVersion": string]
+            "majorErrors": strings, "minorErrors": strings, "summary": string, "strengths": strings, "weaknesses": strings, "improvements": strings,
+            "corrections": ["type": "array", "items": correction], "improvedVersion": string]
         return try JSONSerialization.data(withJSONObject: ["type": "object", "additionalProperties": false, "required": properties.keys.sorted(), "properties": properties], options: [.prettyPrinted, .sortedKeys])
     }
 }

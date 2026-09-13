@@ -3,7 +3,6 @@ import AppKit
 
 struct WritingView: View {
     @Bindable var store: WritingStore
-    var onReview: (EssaySession) -> Void
     @State private var ocrImport: OCRImport?
     @State private var isRecognizing = false
     @State private var ocrTask: Task<Void, Never>?
@@ -109,7 +108,7 @@ struct WritingView: View {
         }.padding(28).background(.white, in: RoundedRectangle(cornerRadius: 12)).overlay(RoundedRectangle(cornerRadius: 12).stroke(WB.line.opacity(0.8)))
     }
     private func submit() {
-        store.submitConfigured(configuration: .load(), onComplete: onReview)
+        store.submitConfigured(configuration: .load())
     }
     private func importImages(_ purpose: OCRPurpose) {
         guard !isRecognizing, !store.isGrading else { return }

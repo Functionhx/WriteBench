@@ -32,6 +32,38 @@ struct JudgeResponse: Codable, Sendable {
     var summary: String
     var corrections: [Correction]
     var improvedVersion: String
+    var strengths: [String] = []
+    var weaknesses: [String] = []
+    var improvements: [String] = []
+    private enum CodingKeys: String, CodingKey {
+        case score, taskCompletion, language, coherence, register, majorErrors, minorErrors, summary, corrections, improvedVersion, strengths, weaknesses, improvements
+    }
+}
+extension JudgeResponse {
+    static func decodeProviderOutput(_ data: Data) throws -> JudgeResponse {
+        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+              ["strengths", "weaknesses", "improvements"].allSatisfy({ object[$0] is [String] }) else {
+            throw GradingError.invalidResponse("缺少优点、不足或改进建议")
+        }
+        return try JSONDecoder().decode(JudgeResponse.self, from: data)
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        score = try c.decode(Double.self, forKey: .score)
+        taskCompletion = try c.decode(Double.self, forKey: .taskCompletion)
+        language = try c.decode(Double.self, forKey: .language)
+        coherence = try c.decode(Double.self, forKey: .coherence)
+        register = try c.decode(Double.self, forKey: .register)
+        majorErrors = try c.decode([String].self, forKey: .majorErrors)
+        minorErrors = try c.decode([String].self, forKey: .minorErrors)
+        summary = try c.decode(String.self, forKey: .summary)
+        corrections = try c.decode([Correction].self, forKey: .corrections)
+        improvedVersion = try c.decode(String.self, forKey: .improvedVersion)
+        // Existing saved reports predate these fields and remain readable.
+        strengths = try c.decodeIfPresent([String].self, forKey: .strengths) ?? []
+        weaknesses = try c.decodeIfPresent([String].self, forKey: .weaknesses) ?? []
+        improvements = try c.decodeIfPresent([String].self, forKey: .improvements) ?? []
+    }
 }
 struct ReviewerResult: Codable, Identifiable, Sendable {
     var judge: Judge
@@ -62,6 +94,14 @@ struct GradingReport: Codable, Sendable {
         }.sorted { $0.severity == .major && $1.severity != .major }
     }
     var improvedVersion: String { reviewers.first(where: { $0.judge == .b })?.response.improvedVersion ?? "" }
+    var conclusion: String { reviewers.min { abs($0.response.score - finalScore) < abs($1.response.score - finalScore) }?.response.summary ?? "" }
+    var strengths: [String] { uniqueFeedback(reviewers.flatMap(\.response.strengths)) }
+    var weaknesses: [String] { uniqueFeedback(reviewers.flatMap { $0.response.weaknesses.isEmpty ? $0.response.majorErrors : $0.response.weaknesses }) }
+    var improvements: [String] { uniqueFeedback(reviewers.flatMap(\.response.improvements)) }
+    private func uniqueFeedback(_ items: [String]) -> [String] {
+        var seen = Set<String>()
+        return items.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }
+    }
     func dimension(_ keyPath: KeyPath<JudgeResponse, Double>) -> Double {
         let values = reviewers.map { $0.response[keyPath: keyPath] }.sorted()
         return values.isEmpty ? 0 : values[values.count / 2]

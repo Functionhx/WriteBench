@@ -5,12 +5,26 @@ struct ReviewView: View {
     @Environment(\.dismiss) private var dismiss
     @Bindable var session: EssaySession
     var onRewrite: (EssaySession) -> Void
+    @State private var didCopyReview = false
+    @State private var copyFeedbackTask: Task<Void, Never>?
     var body: some View {
         VStack(spacing: 0) {
             HStack {
                 Label(session.task.isTranslation ? "Translation review" : "Writing review", systemImage: "checkmark.seal").font(.system(size: 16, weight: .semibold)).labelStyle(BlueIconLabelStyle())
                 Spacer()
                 Text(session.task.fullTitle).foregroundStyle(WB.secondary)
+                Button {
+                    guard let text = ReviewTextExporter.text(for: session) else { return }
+                    NSPasteboard.general.clearContents()
+                    didCopyReview = NSPasteboard.general.setString(text, forType: .string)
+                    copyFeedbackTask?.cancel()
+                    copyFeedbackTask = Task {
+                        do { try await Task.sleep(for: .seconds(2)); didCopyReview = false } catch { }
+                    }
+                } label: {
+                    Label(didCopyReview ? "Copied" : "Copy", systemImage: didCopyReview ? "checkmark" : "doc.on.doc")
+                }.buttonStyle(QuietButtonStyle()).disabled(session.report == nil)
+                    .help("复制评分、评语和修改建议").accessibilityLabel("复制评审结果")
                 IconButton(symbol: "xmark", help: "Close review") { dismiss() }
             }.padding(22).background(.white)
             ScrollView {
@@ -20,6 +34,20 @@ struct ReviewView: View {
                             Label("演示模式 · 示例分数，不代表真实写作水平，不计入统计。", systemImage: "info.circle").font(.system(size: 13)).foregroundStyle(WB.secondary).padding(15).frame(maxWidth: .infinity, alignment: .leading).background(WB.tint, in: RoundedRectangle(cornerRadius: 12))
                         }
                         scoreCard(report)
+                        Card {
+                            VStack(alignment: .leading, spacing: 16) {
+                                Text("评阅结论").font(.system(size: 18, weight: .semibold))
+                                Text(report.conclusion).font(.system(size: 15)).lineSpacing(6).textSelection(.enabled)
+                                Text("采用中位分评审的结论；下方保留三位评审的独立意见。").font(.system(size: 11)).foregroundStyle(WB.secondary)
+                            }
+                        }
+                        Card {
+                            VStack(alignment: .leading, spacing: 22) {
+                                feedback("写得好的地方", symbol: "checkmark.circle", color: WB.green, items: report.strengths, empty: "这份评阅未单列优点，可结合评审意见查看。")
+                                feedback("不足的地方", symbol: "exclamationmark.circle", color: WB.amber, items: report.weaknesses, empty: "评审未单列主要不足，请结合评分维度查看。")
+                                feedback("下一稿怎么改", symbol: "pencil.line", color: WB.blue, items: report.improvements, empty: "请参考下方逐句修改与改进版本。")
+                            }
+                        }
                         HStack(spacing: 14) {
                             ForEach(report.reviewers) { reviewer in
                                 Card(padding: 18) {
@@ -126,6 +154,13 @@ struct ReviewView: View {
             Text(title).font(.system(size: 13)).frame(width: 125, alignment: .leading)
             GeometryReader { proxy in ZStack(alignment: .leading) { Capsule().fill(WB.tint); Capsule().fill(WB.blue.opacity(0.7)).frame(width: proxy.size.width * value / 10) } }.frame(height: 6)
             Text(value.scoreText).font(.system(size: 13, weight: .medium)).monospacedDigit().frame(width: 35, alignment: .trailing)
+        }
+    }
+    private func feedback(_ title: String, symbol: String, color: Color, items: [String], empty: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label(title, systemImage: symbol).font(.system(size: 15, weight: .semibold)).foregroundStyle(color)
+            if items.isEmpty { Text(empty).font(.system(size: 12)).foregroundStyle(WB.secondary) }
+            ForEach(items, id: \.self) { Text("• " + $0).font(.system(size: 14)).lineSpacing(4).textSelection(.enabled) }
         }
     }
 }

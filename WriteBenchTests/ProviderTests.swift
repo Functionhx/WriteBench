@@ -102,11 +102,13 @@ private actor CodexFixtureRunner: ProcessRunning {
 }
 
 @Test @MainActor func pastedKeyWorksWithoutKeychainOrPersistentPreferences() throws {
-    defer { DeepSeekCredentials.clearSession() }
-    try DeepSeekCredentials.use("  local-test-only-placeholder  ", remember: false)
+    let suite = "writebench-credentials-test-\(UUID())"
+    let defaults = try #require(UserDefaults(suiteName: suite))
+    defer { DeepSeekCredentials.clearSession(); defaults.removePersistentDomain(forName: suite) }
+    try DeepSeekCredentials.use("  local-test-only-placeholder  ", remember: false, defaults: defaults)
     #expect(DeepSeekCredentials.hasSessionKey)
     #expect(try DeepSeekCredentials.load() == "local-test-only-placeholder")
-    #expect(UserDefaults.standard.string(forKey: "deepSeekAPIKey") == nil)
+    #expect(defaults.string(forKey: "deepSeekAPIKey") == nil)
     DeepSeekCredentials.clearSession()
     #expect(!DeepSeekCredentials.hasSessionKey)
     #expect(throws: GradingError.self) { try DeepSeekCredentials.load() }

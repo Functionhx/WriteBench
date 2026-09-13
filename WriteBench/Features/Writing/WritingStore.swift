@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 import Observation
 
-enum WritingStage { case preparation, answering, grading }
+enum WritingStage { case preparation, answering }
 
 @MainActor @Observable final class WritingStore {
     var task: WritingTask = .kaoyanSmall
@@ -11,8 +11,8 @@ enum WritingStage { case preparation, answering, grading }
     var essay = ""
     private(set) var stage: WritingStage = .preparation
     var isInSession: Bool { stage != .preparation }
-    var isGrading: Bool { stage == .grading }
-    var showsLiveWordCount: Bool { task.exam == .ielts }
+    var isGrading: Bool { gradingJob?.phase.isRunning == true }
+    private(set) var gradingJob: BackgroundGradingJob?
     var inputMode: InputMode = .typed
     var elapsed: TimeInterval = 0
     var timerRunning = false
@@ -114,8 +114,8 @@ enum WritingStage { case preparation, answering, grading }
             } else { question = task.sampleQuestion; questionLabel = task == .kaoyanSmall ? "原创练习 · 邀请信" : "原创练习"; essay = ""; elapsed = 0; inputMode = .typed; questionImage = nil; sourceImages = []; rewriteSessionID = nil }
         } catch { self.error = error.localizedDescription }
     }
-    func submitConfigured(configuration: GradingConfiguration, loadKey: @MainActor () throws -> String = DeepSeekCredentials.load, onComplete: @escaping (EssaySession) -> Void) {
-        guard stage == .answering else { return }
+    func submitConfigured(configuration: GradingConfiguration, loadKey: @MainActor () throws -> String = DeepSeekCredentials.load, onComplete: @escaping (EssaySession) -> Void = { _ in }) {
+        guard stage == .answering, !isGrading else { return }
         needsAPIKey = false
         guard persistDraft() else { return }
         var deepSeek: DeepSeekClient?
@@ -129,54 +129,77 @@ enum WritingStage { case preparation, answering, grading }
         } catch GradingError.missingKey { needsAPIKey = true; return }
         catch { self.error = error.localizedDescription; return }
         let selectedDeepSeek = deepSeek
-        if !configuration.requiresCodex {
-            submit(service: ProviderRouter(configuration: configuration, deepSeek: selectedDeepSeek, codex: nil), isDemo: false, onComplete: onComplete)
-            return
-        }
-        tick(); timerRunning = false; stage = .grading
-        gradingTask = Task {
-            do {
-                let connection = try await CodexJudgeService.checkConnection(customPath: configuration.codexPath)
-                try Task.checkCancellation()
-                let codex = CodexJudgeService(executable: connection.executable, model: configuration.codexModel, reasoning: configuration.codexReasoning)
-                stage = .answering
-                submit(service: ProviderRouter(configuration: configuration, deepSeek: selectedDeepSeek, codex: codex), isDemo: false, onComplete: onComplete)
-                if stage == .answering { lastTick = Date(); timerRunning = true; gradingTask = nil }
-            } catch {
-                stage = .answering; lastTick = Date(); timerRunning = true; gradingTask = nil
-                if !(error is CancellationError) {
+        launchSubmission(configuration: configuration, isDemo: false, onComplete: onComplete) {
+            var codex: CodexJudgeService?
+            if configuration.requiresCodex {
+                do {
+                    let connection = try await CodexJudgeService.checkConnection(customPath: configuration.codexPath)
+                    try Task.checkCancellation()
+                    codex = CodexJudgeService(executable: connection.executable, model: configuration.codexModel, reasoning: configuration.codexReasoning)
+                } catch {
+                    if Task.isCancelled || error is CancellationError { throw CancellationError() }
                     let judges = Judge.allCases.filter { configuration.provider(for: $0) == .codex }.map(\.title).joined(separator: "、")
-                    self.error = "\(judges) · ChatGPT via Codex\n\(error.localizedDescription)\n本次尚未发起评卷。请保存并离开，前往设置检查连接。"
+                    throw JudgeExecutionError(judge: Judge.allCases.first { configuration.provider(for: $0) == .codex } ?? .c,
+                        detail: "\(judges) · ChatGPT via Codex\n\(error.localizedDescription)\n尚未发起评卷，请在设置中检查连接。")
                 }
             }
+            return ProviderRouter(configuration: configuration, deepSeek: selectedDeepSeek, codex: codex)
         }
     }
-    func submit(service: any EssayGradingService, isDemo: Bool, onComplete: @escaping (EssaySession) -> Void) {
+    func submit(service: any EssayGradingService, isDemo: Bool, onComplete: @escaping (EssaySession) -> Void = { _ in }) {
+        launchSubmission(configuration: nil, isDemo: isDemo, onComplete: onComplete) { service }
+    }
+    private func launchSubmission(configuration: GradingConfiguration?, isDemo: Bool, onComplete: @escaping (EssaySession) -> Void,
+                                  makeService: @escaping @Sendable () async throws -> any EssayGradingService) {
+        guard !isGrading else { return }
         guard stage == .answering else { error = "请先点击开始答题。"; return }
         guard let context else { return }
         guard !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !essay.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { error = "请先填写题目与作答内容。"; return }
         tick(); guard persistDraft() else { return }
         do {
-            let input = GradingInput(task: task, question: question, essay: essay, rubric: try RubricLoader.load(task))
-            let duration = elapsed, mode = inputMode, image = questionImage, images = sourceImages
-            timerRunning = false; stage = .grading
+            let submission = GradingSubmission(input: GradingInput(task: task, question: question, essay: essay, rubric: try RubricLoader.load(task)),
+                duration: elapsed, inputMode: inputMode, questionImage: questionImage, sourceImages: sourceImages, parentSessionID: rewriteSessionID)
+            let job = BackgroundGradingJob(submission: submission, configuration: configuration, connecting: configuration?.requiresCodex == true)
+            gradingJob = job
+            timerRunning = false; stage = .preparation
             gradingTask = Task {
-                defer {
-                    if stage == .grading { stage = .answering; lastTick = Date(); timerRunning = true }
-                    gradingTask = nil
-                }
+                let activity = ProcessInfo.processInfo.beginActivity(options: .userInitiatedAllowingIdleSystemSleep, reason: "WriteBench 正在评阅已提交的作答")
+                defer { ProcessInfo.processInfo.endActivity(activity) }
+                defer { if gradingJob?.id == job.id { gradingTask = nil } }
                 do {
-                    let report = try await GradingCoordinator(service: service).grade(input, isDemo: isDemo)
+                    let service = try await makeService()
                     try Task.checkCancellation()
-                    let session = try EssaySession(task: input.task, question: input.question, essay: input.essay, duration: duration, inputMode: mode, report: report, questionImage: image, sourceImages: images)
+                    job.phase = .reviewing
+                    let report = try await GradingCoordinator(service: service).grade(submission.input, isDemo: isDemo) { event in
+                        await MainActor.run { job.receive(event) }
+                    }
+                    try Task.checkCancellation()
+                    job.phase = .saving
+                    let session = try EssaySession(task: submission.input.task, question: submission.input.question, essay: submission.input.essay,
+                        duration: submission.duration, inputMode: submission.inputMode, report: report, questionImage: submission.questionImage,
+                        sourceImages: submission.sourceImages, parentSessionID: submission.parentSessionID)
                     context.insert(session)
                     do { try context.save() } catch { context.delete(session); throw error }
-                    stage = .preparation
+                    job.session = session; job.finish(.completed)
                     onComplete(session)
-                } catch is CancellationError { }
-                catch { self.error = error.localizedDescription }
+                } catch {
+                    if Task.isCancelled || error is CancellationError { job.finish(.cancelled) }
+                    else {
+                        if let failure = error as? JudgeExecutionError { job.judges[failure.judge] = .failed }
+                        job.finish(.failed, detail: error.localizedDescription)
+                    }
+                }
             }
         } catch { self.error = error.localizedDescription }
+    }
+    func cancelGrading() {
+        guard let job = gradingJob, job.phase.isRunning else { return }
+        job.phase = .cancelling
+        gradingTask?.cancel()
+    }
+    func dismissGradingStatus() {
+        guard !isGrading else { return }
+        gradingJob = nil
     }
     func beginRewrite(_ session: EssaySession) {
         guard stage == .preparation else { return }
