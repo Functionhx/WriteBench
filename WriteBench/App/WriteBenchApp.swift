@@ -17,7 +17,7 @@ import SwiftData
         do {
             // Hosted tests must never open or migrate the user's active database.
             if Self.isTestHost {
-                container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self,
+                container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, EssayFolderMetadata.self,
                     configurations: ModelConfiguration(isStoredInMemoryOnly: true))
                 storageError = nil
                 return
@@ -28,7 +28,7 @@ import SwiftData
             let folder = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("WriteBench", isDirectory: true)
             try fm.createDirectory(at: folder, withIntermediateDirectories: true)
             let storeURL = fm.fileExists(atPath: legacy.path) ? legacy : folder.appendingPathComponent("default.store")
-            container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, configurations: ModelConfiguration(url: storeURL))
+            container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, EssayFolderMetadata.self, configurations: ModelConfiguration(url: storeURL))
             storageError = nil
             if UserDefaults.standard.string(forKey: "deepSeekModel") == "deepseek-v4-flash" { UserDefaults.standard.set(DeepSeekClient.defaultModel, forKey: "deepSeekModel") }
         }

@@ -96,3 +96,37 @@ import Testing
     session.reviewerResults = Data("invalid".utf8)
     #expect(ReviewTextExporter.text(for: session) == nil)
 }
+
+@Test func folderDetailsAcceptCustomLabelsAndOptionalQuestionYears() throws {
+    let details = try EssayFolderDetails(title: "  Invitation practice  ", year: "2024", label: "真题")
+    #expect(details.title == "Invitation practice" && details.year == 2024 && details.label == "真题")
+    #expect(try EssayFolderDetails(title: "", year: " \n", label: "").year == nil)
+    for year in ["24", "2024年", "2024.0", "２０２４", "3000", "-100"] {
+        #expect(throws: (any Error).self) { try EssayFolderDetails(title: "", year: year, label: "") }
+    }
+    #expect(throws: (any Error).self) { try EssayFolderDetails(title: String(repeating: "a", count: 101), year: "", label: "") }
+}
+
+@Test @MainActor func folderMetadataPersistsAndAppliesToFutureVersionsWithoutChangingEssays() throws {
+    let container = try ModelContainer(for: EssaySession.self, EssayFolderMetadata.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let context = ModelContext(container), first = try historySession(score: 4.5)
+    context.insert(first); try context.save()
+    let oldGroup = try #require(EssayHistoryGroup.make(from: [first]).first)
+    try EssayFolderDetails(title: "Invitation practice", year: "2024", label: "真题").save(key: oldGroup.id.storageKey, existing: nil, in: context)
+    let revision = try historySession(score: 7.5, date: 200, parent: first.id)
+    context.insert(revision); try context.save()
+    let reloadedContext = ModelContext(container)
+    let items = try reloadedContext.fetch(FetchDescriptor<EssayFolderMetadata>())
+    let metadata = try #require(items.first)
+    #expect(items.count == 1 && metadata.questionYear == 2024)
+    let group = try #require(EssayHistoryGroup.make(from: reloadedContext.fetch(FetchDescriptor<EssaySession>())).first)
+    #expect(group.id.storageKey == oldGroup.id.storageKey && group.versions.count == 2)
+    #expect(group.matches(search: "invitation practice", exam: .kaoyan, year: 2024, label: "真题", metadata: metadata))
+    #expect(!group.matches(search: "", exam: nil, year: 2023, metadata: metadata))
+    #expect(!group.matches(search: "", exam: nil, label: "模拟题", metadata: metadata))
+    try EssayFolderDetails(title: "", year: "", label: "自选").save(key: group.id.storageKey, existing: metadata, in: reloadedContext)
+    #expect(try reloadedContext.fetchCount(FetchDescriptor<EssayFolderMetadata>()) == 1)
+    #expect(metadata.title.isEmpty && metadata.questionYear == nil && metadata.label == "自选")
+    #expect(first.question == revision.question && first.originalEssay == "SEPARATE ORIGINAL ESSAY BODY")
+    #expect(first.finalScore == 4.5 && revision.finalScore == 7.5)
+}

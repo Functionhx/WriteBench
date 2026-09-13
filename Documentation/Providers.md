@@ -20,7 +20,7 @@ Each role has its own provider selector. A submission freezes the selected confi
 
 Codex continues to decode its final schema-constrained output file; no token-by-token Codex preview is claimed. Prompt version 1.2 requires `strengths`, `weaknesses` and `improvements` arrays alongside the existing fields. Old saved reviews decode these missing arrays as empty. The overview uses the median-score reviewer's conclusion and locally deduplicates feedback; it makes no extra summarization call.
 
-History groups records at display time by task, normalized exact prompt and question-image digest. It does not mutate old records or infer their ancestry. The optional SwiftData `parentSessionID` records only an explicit rewrite source, captured when submitted. Original essays and previous scores remain immutable. Different diagrams with identical instruction text stay separate.
+History groups records at display time by task, normalized exact prompt and question-image digest. It does not mutate old records or infer their ancestry. The optional SwiftData `parentSessionID` records only an explicit rewrite source, captured when submitted. Original essays and previous scores remain immutable. Different diagrams with identical instruction text stay separate. Optional folder title, question year and custom label live in a separate `EssayFolderMetadata` model keyed by the stable group digest, so future attempts inherit the same organization without changing essay evidence.
 
 ## Direct key entry
 

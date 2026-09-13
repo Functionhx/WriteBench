@@ -7,6 +7,11 @@ import CryptoKit
         let subtype: String
         let question: String
         let imageDigest: String?
+        var storageKey: String {
+            let parts = [subtype, question, imageDigest ?? ""]
+            let value = parts.map { "\($0.utf8.count):" + $0 }.joined()
+            return SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()
+        }
     }
     let id: Key
     let versions: [EssaySession]
@@ -31,10 +36,12 @@ import CryptoKit
             $0.latest.date == $1.latest.date ? $0.latest.id.uuidString < $1.latest.id.uuidString : $0.latest.date > $1.latest.date
         }
     }
-    func matches(search: String, exam: Exam?) -> Bool {
+    func matches(search: String, exam: Exam?, year: Int? = nil, label: String? = nil, metadata: EssayFolderMetadata? = nil) -> Bool {
         guard exam == nil || latest.exam == exam?.rawValue else { return false }
+        guard year == nil || metadata?.questionYear == year,
+              label == nil || metadata?.label == label else { return false }
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
-        return query.isEmpty || versions.contains {
+        return query.isEmpty || [metadata?.title ?? "", metadata?.label ?? ""].contains { $0.localizedCaseInsensitiveContains(query) } || versions.contains {
             [$0.question, $0.originalEssay, $0.finalRewrite].contains { $0.localizedCaseInsensitiveContains(query) }
         }
     }
