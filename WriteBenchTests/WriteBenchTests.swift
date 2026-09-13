@@ -245,6 +245,13 @@ private struct UnavailableGrader: EssayGradingService {
     restored.persistDraft()
     let unaffected = try #require(ModelContext(container).fetch(FetchDescriptor<EssaySession>()).first)
     #expect(unaffected.finalRewrite == "The resumed rewrite.")
+    restored.beginRewrite(unaffected)
+    #expect(restored.leaveAnswering())
+    #expect(restored.importQuestion(text: unaffected.question, title: "A fresh attempt at the same question"))
+    restored.essay = "A separate practice attempt."
+    #expect(restored.persistDraft())
+    let detached = try #require(ModelContext(container).fetch(FetchDescriptor<EssaySession>()).first)
+    #expect(detached.finalRewrite == "The resumed rewrite.")
 }
 
 @Test @MainActor func missingAPIKeyBlocksTypedAndHandwrittenGradingWithoutAResult() throws {

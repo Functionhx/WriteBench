@@ -55,7 +55,7 @@ macOS 当前是本地 ad-hoc 签名版本，尚未经过 Apple Developer ID 公�
 
 1. 打开 **Settings**，填写自己的 DeepSeek API Key，点击 **使用此 Key**。默认仅在本次运行内存中保留；macOS 可勾选 **在这台 Mac 上记住 Key**。提交时只读已启用的内存 Key，记住与恢复在后台完成。
 2. 使用 Codex 评审时，先安装[官方 Codex CLI](https://learn.chatgpt.com/docs/codex-cli)，在终端运行 `codex login`。已登录的用户直接点击 **Check Connection**，无需再走浏览器。
-3. 选择考试与题型，输入题目，或导入题目图片。
+3. 选择考试与题型。macOS 点击题目卡片的 **导入文字**，粘贴完整题目，或选择 `.txt` / `.md` 文件（UTF-8 / UTF-16），编辑确认后自动保存；也可以导入题目图片。
 4. 点击 **开始答题**，在沉浸式界面完成作文，然后 **交卷**。
 5. 阅读三位评审的分数与修改建议，点击 **开始重写** 完成下一稿。
 
