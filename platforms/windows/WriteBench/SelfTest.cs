@@ -20,6 +20,10 @@ static class SelfTest
         catch { rejected = true; }
         if (!rejected)
             throw new Exception("Incomplete results accepted");
+        bool duplicateRejected = false;
+        try { Aggregator.Aggregate([reviewers[0], reviewers[1], reviewers[0]], task, "test"); }
+        catch { duplicateRejected = true; }
+        if (!duplicateRejected) throw new Exception("Duplicate judges accepted");
         if (ExamTask.All.Count(t => t.Translation) != 3 || ExamTask.All.First(t => t.Id == "kaoyan2Translation").Maximum != 15)
             throw new Exception("Translation setup invalid");
         foreach (var t in ExamTask.All)

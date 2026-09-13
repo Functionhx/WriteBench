@@ -7,6 +7,7 @@ import android.graphics.*;
 import android.graphics.drawable.*;
 import android.net.Uri;
 import android.os.*;
+import android.provider.OpenableColumns;
 import android.text.*;
 import android.view.*;
 import android.view.inputmethod.InputMethodManager;
@@ -40,7 +41,7 @@ public final class MainActivity extends Activity {
   private final ArrayList<Uri> images = new ArrayList<>();
   private final ArrayList<String> recognized = new ArrayList<>();
   private int ocrPurpose = 0, ocrIndex = 0;
-  private boolean inOCR = false;
+  private boolean inOCR = false, recognizing = false;
   private final Runnable ticker =
       new Runnable() {
         public void run() {
@@ -458,6 +459,7 @@ public final class MainActivity extends Activity {
           }
           apiKey = value;
           key.setText("");
+          render();
           message("Key 已启用", "仅保留在本次运行内存中，关闭应用后请重新填写。现在可以开始答题并提交。");
         });
     c.addView(label(apiKey.isBlank() ? "尚未填写 Key" : "Key 已启用 · 本次运行有效"));
@@ -739,6 +741,10 @@ public final class MainActivity extends Activity {
   }
 
   private void importImages(int purpose) {
+    if (recognizing) {
+      message("正在识别", "请等待本次识别完成。");
+      return;
+    }
     ocrPurpose = purpose;
     Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT);
     i.setType("image/*");
@@ -751,6 +757,10 @@ public final class MainActivity extends Activity {
   protected void onActivityResult(int code, int result, Intent data) {
     super.onActivityResult(code, result, data);
     if (code != 70 || result != RESULT_OK || data == null) return;
+    if (data.getClipData() != null && data.getClipData().getItemCount() > 12) {
+      message("图片过多", "一次最多导入 12 页，请分批导入。");
+      return;
+    }
     images.clear();
     recognized.clear();
     if (data.getClipData() != null) {
@@ -759,18 +769,25 @@ public final class MainActivity extends Activity {
     } else if (data.getData() != null) images.add(data.getData());
     if (images.isEmpty()) return;
     Toast.makeText(this, "正在本机识别，请稍候…", Toast.LENGTH_LONG).show();
+    recognizing = true;
     recognizeNext(0);
   }
 
   private void recognizeNext(int index) {
+    if (isDestroyed() || isFinishing()) {
+      recognizing = false;
+      return;
+    }
     if (index >= images.size()) {
+      recognizing = false;
       ocrIndex = 0;
       inOCR = true;
       showOCR();
       return;
     }
     try {
-      InputImage image = InputImage.fromFilePath(this, images.get(index));
+      Bitmap bitmap = scaledImage(images.get(index), 3200);
+      InputImage image = InputImage.fromBitmap(bitmap, 0);
       var recognizer =
           TextRecognition.getClient(
               new com.google.mlkit.vision.text.chinese.ChineseTextRecognizerOptions.Builder()
@@ -780,17 +797,45 @@ public final class MainActivity extends Activity {
           .addOnSuccessListener(
               result -> {
                 recognized.add(result.getText());
+                bitmap.recycle();
                 recognizer.close();
                 recognizeNext(index + 1);
               })
           .addOnFailureListener(
               error -> {
                 recognizer.close();
+                bitmap.recycle();
+                recognizing = false;
                 message("识别失败", error.getMessage());
               });
     } catch (Exception e) {
+      recognizing = false;
       message("无法打开图片", e.getMessage());
     }
+  }
+
+  private Bitmap scaledImage(Uri uri, int maximum) throws java.io.IOException {
+    try (var cursor =
+        getContentResolver().query(uri, new String[] {OpenableColumns.SIZE}, null, null, null)) {
+      if (cursor != null
+          && cursor.moveToFirst()
+          && !cursor.isNull(0)
+          && cursor.getLong(0) > 25L * 1024 * 1024)
+        throw new java.io.IOException("单页图片不能超过 25 MB，请缩小后导入。");
+    }
+    return ImageDecoder.decodeBitmap(
+        ImageDecoder.createSource(getContentResolver(), uri),
+        (decoder, info, source) -> {
+          decoder.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE);
+          double scale =
+              Math.min(
+                  1.0,
+                  (double) maximum
+                      / Math.max(info.getSize().getWidth(), info.getSize().getHeight()));
+          decoder.setTargetSize(
+              Math.max(1, (int) (info.getSize().getWidth() * scale)),
+              Math.max(1, (int) (info.getSize().getHeight() * scale)));
+        });
   }
 
   private void showOCR() {
@@ -801,7 +846,12 @@ public final class MainActivity extends Activity {
     TextView pageLabel = text("校对第 " + (ocrIndex + 1) + " / " + images.size() + " 页", 18, INK);
     sheet.addView(pageLabel);
     ImageView image = new ImageView(this);
-    image.setImageURI(images.get(ocrIndex));
+    try {
+      image.setImageBitmap(scaledImage(images.get(ocrIndex), 1600));
+    } catch (Exception e) {
+      message("预览失败", e.getMessage());
+      return;
+    }
     image.setScaleType(ImageView.ScaleType.FIT_CENTER);
     sheet.addView(image, new LinearLayout.LayoutParams(-1, dp(200)));
     EditText words = input(recognized.get(ocrIndex), "校正识别文字", 7);

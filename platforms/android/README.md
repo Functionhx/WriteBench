@@ -14,6 +14,8 @@ Open this folder in Android Studio and allow Gradle sync. This project was built
 
 ```sh
 ./gradlew :app:testDebugUnitTest :app:assembleDebug
+# With a connected test emulator/device:
+./gradlew :app:connectedDebugAndroidTest
 ```
 
 For a signed release, provide your own keystore through environment variables (never commit it):

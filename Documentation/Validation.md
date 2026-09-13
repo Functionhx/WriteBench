@@ -19,7 +19,8 @@
 
 - Built using the user's installed Android Studio JBR and SDK: Gradle 8.13, AGP 8.13.2, compile/target SDK 35, minimum API 33.
 - Five JUnit tests cover translation directions/scales, Chinese answer aggregation, disagreement, incomplete/duplicate judges, exact correction spans and missing-Key rejection.
-- Signed release APK passes apksigner verification and installs successfully on the Android 15 ARM64 emulator. Native UI inspection results are recorded below after the final check.
+- Signed release APK passes apksigner verification and installs successfully on the Android 15 ARM64 emulator. The app was built and launched from the installed Android Studio; the actual phone preparation screen was visually inspected. Interactive keyboard/rotation behavior has not been manually verified across physical devices.
+- Two Android 15 device tests pass: real bundled ML Kit OCR of the synthetic image, and atomic local history with a Chinese rewrite that preserves the original.
 - On-device ML Kit OCR is bundled for Chinese and Latin text. Three real DeepSeek providers are required; no demo grading is in the shipped app.
 
 ## Live provider scope

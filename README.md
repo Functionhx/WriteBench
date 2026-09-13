@@ -134,7 +134,7 @@ platforms/android/   Android Studio 项目与手机界面
 scripts/             构建、图标生成与显式联调脚本
 ```
 
-macOS 自动化测试覆盖 29 个案例，Android 有 5 个领域测试；Windows 通过评分、持久化、字段校验及实际 OCR 自检。GPT-6 Astra/MAX 已通过实际 Swift 子进程完成样例评卷；DeepSeek 已验证官方模型接口连接。完整混合三评需用户填入有效 Key 后使用。
+macOS 自动化测试覆盖 29 个案例，Android 有 5 个领域测试与 2 个实际设备服务测试；Windows 通过评分、持久化、字段校验及实际 OCR 自检。GPT-6 Astra/MAX 已通过实际 Swift 子进程完成样例评卷；DeepSeek 已验证官方模型接口连接。完整混合三评需用户填入有效 Key 后使用。
 
 <details>
 <summary><strong>更多文档</strong></summary>

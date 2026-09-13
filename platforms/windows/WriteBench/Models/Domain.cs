@@ -20,7 +20,11 @@ public record Correction([property: JsonRequired] string Original, [property: Js
 public record JudgeResponse([property: JsonRequired] double Score, [property: JsonRequired] double TaskCompletion, [property: JsonRequired] double Language, [property: JsonRequired] double Coherence, [property: JsonRequired] double Register, [property: JsonRequired] string[] MajorErrors, [property: JsonRequired] string[] MinorErrors, [property: JsonRequired] string Summary, [property: JsonRequired] Correction[] Corrections, [property: JsonRequired] string ImprovedVersion);
 public record Reviewer(string Judge, string Provider, string Model, string ReasoningEffort, JudgeResponse Response);
 public record Report(Reviewer[] Reviewers, double FinalScore, double Spread, string Confidence, string RubricVersion = "2026.09-v1", string PromptVersion = "windows-1.0");
-public record Session(Guid Id, DateTime Date, string TaskId, string Question, string OriginalEssay, Report Report, double WritingDuration, string InputMode, string FinalRewrite = "");
+public record Session(Guid Id, DateTime Date, string TaskId, string Question, string OriginalEssay, Report Report, double WritingDuration, string InputMode, string FinalRewrite = "")
+{
+    public int WordCount => System.Text.RegularExpressions.Regex.Matches(OriginalEssay, @"[A-Za-z0-9]+(?:[’'-][A-Za-z0-9]+)*").Count;
+    public string CorrectedEssay => Report.Reviewers.First(r => r.Judge == "B").Response.ImprovedVersion;
+}
 public record Draft(string Question, string Essay, double Elapsed, string InputMode = "typed");
 public record Settings(string A = "DeepSeek", string B = "DeepSeek", string C = "Codex", string CodexPath = "", string CodexModel = "gpt-6-astra");
 public static class JSON

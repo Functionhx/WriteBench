@@ -182,6 +182,7 @@ public static class Grading
     public static async Task<Report> Run(ExamTask task, string question, string essay, string key, Settings settings, CancellationToken token)
     {
         var selections = new[] { settings.A, settings.B, settings.C };
+        if (selections.Any(p => p != "DeepSeek" && p != "Codex")) throw new Exception("存在未知评审服务，请在设置中重新选择。不会自动切换服务。");
         if (selections.Contains("DeepSeek") && string.IsNullOrWhiteSpace(key))
             throw new Exception("请先在设置中填写 DeepSeek API Key。不会生成模拟评分。");
         string codex = "";
