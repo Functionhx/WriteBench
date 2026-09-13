@@ -1,4 +1,4 @@
-# AI grading providers — 1.2
+# AI grading providers — 1.3
 
 Defaults verified on 2026-09-13:
 
@@ -12,7 +12,7 @@ Each role has its own provider selector. A submission freezes the selected confi
 
 ## Direct key entry
 
-A user pastes a DeepSeek key and clicks **使用此 Key**. It works immediately from process memory, without accessing an old Keychain item. **在这台 Mac 上记住 Key** is optional and defaults off. No key is stored in UserDefaults, SwiftData, source, logs or a release package. Keychain reads and updates disallow authentication UI; an inaccessible item asks the user to enter the API key again. A failed optional save leaves the in-memory key usable and reports that it could not be remembered.
+A user pastes a DeepSeek key and clicks **使用此 Key**. It works immediately from process memory, without accessing an old Keychain item. **在这台 Mac 上记住 Key** is optional and defaults off. No key is stored in UserDefaults, SwiftData, source, logs or a release package. Submission reads memory only. Explicit persistence and opt-in startup restoration run off the UI thread using a new data-protection Keychain item, with authentication UI disallowed. Legacy development items are never queried. An inaccessible item leaves the user able to enter the API key again. A failed optional save leaves the in-memory key usable and reports that it could not be remembered.
 
 Missing keys block both typed and OCR-confirmed submissions before any provider receives the essay. The draft is saved; the user can continue answering or open Settings. Clearing a key or quitting clears the session key. Remembered keys follow macOS Keychain storage rules.
 

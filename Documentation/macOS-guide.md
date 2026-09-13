@@ -1,4 +1,4 @@
-# WriteBench 1.2
+# WriteBench 1.3
 
 A real native macOS exam-writing workstation, built with Swift 6, SwiftUI, AppKit, SwiftData, Vision and Swift Charts. No web wrapper, external runtime or third-party app dependencies.
 
@@ -14,7 +14,7 @@ Double-click **WriteBench.app** in this folder, or open **WriteBench.xcodeproj**
 
 ## The writing workflow
 
-1. Choose 考研英语 (英语一小作文/大作文), CET-6 Writing, or IELTS Academic Task 1 / Task 2.
+1. Choose 考研英语 (英语一小作文/大作文、英语一/二翻译), CET-6 writing/translation, or IELTS Academic Task 1 / Task 2.
 2. Use the supplied **original practice question**, edit/paste your own, or import an image. The pencil beside the question toggles its plain-text editor. 真题库 saves your own labelled question sources; bundled exercises are not presented as past papers.
 3. Click **开始答题** (or **⌘Return**) to enter the only answering workspace: native full-screen immersion. Preparation has no essay editor or grading button. The sidebar, exam tabs and decorative cards disappear. The question stays on the left and your answer on the right.
 4. The timer starts when you start answering. Kaoyan and CET-6 use a ruled answer area with **no live word count**; IELTS retains a small word count. This is a practice writing surface, not a claim of exact official answer-card dimensions. Native undo/redo and copy/paste remain available through standard shortcuts, without a formatting toolbar. **保存并离开** saves the draft and pauses its timer; continuing requires **开始答题** again. Switching away from the app during an active session does not stop the exam timer. Leaving macOS full screen through the system controls still leaves you in the same minimal answering workspace.
