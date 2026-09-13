@@ -81,7 +81,7 @@ struct WorkspaceView: View {
             ForEach(Exam.allCases) { exam in
                 Button { store.select(exam.tasks[0]); destination = .write } label: {
                     VStack(spacing: 0) {
-                        Text(exam.title).font(.system(size: 17, weight: store.task.exam == exam ? .semibold : .medium)).frame(height: 69)
+                        Label(exam.title, systemImage: exam.symbol).font(.system(size: 16, weight: store.task.exam == exam ? .semibold : .medium)).frame(height: 69)
                         Capsule().fill(store.task.exam == exam ? WB.blue : .clear).frame(width: 58, height: 3)
                     }.foregroundStyle(store.task.exam == exam ? WB.blue : WB.ink)
                 }.buttonStyle(.plain).accessibilityIdentifier("exam_\(exam.rawValue)")

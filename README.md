@@ -26,11 +26,16 @@ WriteBench 把练习收敛为一条清晰的路径：选题、作答、评阅、
 
 ### 支持的考试
 
+<p align="center"><img src="Design/Exams/kaoyan.svg" width="56" alt="考研英语" />　<img src="Design/Exams/cet6.svg" width="56" alt="CET-6 六级" />　<img src="Design/Exams/ielts.svg" width="56" alt="IELTS 雅思" /></p>
+
 | 考试 | 题型 | 评分尺度 |
 | :--- | :--- | :--- |
-| 考研英语一 | 小作文 · 大作文 | 10 分 · 20 分 |
-| CET-6 | Writing | 写作练习原始分 15 分 |
-| IELTS Academic | Task 1 · Task 2 | 单项任务 Band 9 |
+| **考研英语一** | 小作文 · 大作文 · 英译汉 | 10 分 · 20 分 · 10 分 |
+| **考研英语二** | 英译汉段落翻译 | 15 分 |
+| **CET-6 六级** | 写作 · 汉译英 | 各 15 分练习尺度 |
+| **IELTS 雅思 Academic** | Task 1 · Task 2 | 单项任务 Band 9 |
+
+翻译练习重点检查译义、完整性、逻辑关系和目标语言表达；英语一与英语二使用独立 rubric。考研、六级作答期间不显示计词器。
 
 练习分数用于反馈与自查；内置 rubric 是版本化的实践摘要，不是官方阅卷系统。CET-6 不虚构总分换算，IELTS 不把单篇任务分数当作完整 Writing 成绩。
 
@@ -41,14 +46,14 @@ WriteBench 把练习收敛为一条清晰的路径：选题、作答、评阅、
 | 平台 | 安装方式 | 当前状态 |
 | :--- | :--- | :--- |
 | **macOS 15+** | 下载 ZIP / DMG，将 WriteBench.app 放入 Applications | 原生 SwiftUI，Apple silicon + Intel |
-| **Windows** | 独立 Windows 原生构建 | 开发中，构建验证完成后上传 |
-| **Android** | 为手机重新设计的原生界面 | 开发中，构建验证完成后上传 |
+| **Windows 11 x64** | [下载便携 ZIP](https://github.com/Functionhx/WriteBench/releases/download/v1.3.0/WriteBench-0.1.0-Windows-x64.zip)，完整解压后运行 WriteBench.exe | 原生 WPF / .NET 10 · 0.1 预览版 |
+| **Android 13+** | [下载签名 APK](https://github.com/Functionhx/WriteBench/releases/download/v1.3.0/WriteBench-0.1.0-Android.apk)，在手机安装 | 原生 Android Views · 0.1 预览版 |
 
-macOS 当前是本地 ad-hoc 签名版本，尚未经过 Apple Developer ID 公证。公开仓库与安装包不包含 API Key、Codex 登录信息或用户作文。
+macOS 当前是本地 ad-hoc 签名版本，尚未经过 Apple Developer ID 公证；Windows 预览版尚未进行 Authenticode 签名。Windows OCR 需要 Microsoft Visual C++ x64 运行库，详见[平台说明](platforms/windows/README.md)。公开仓库与安装包不包含 API Key、Codex 登录信息或用户作文。
 
 ## 开始使用
 
-1. 打开 **Settings**，填写自己的 DeepSeek API Key，点击 **使用此 Key**。默认仅在本次运行内存中保留；可勾选 **在这台 Mac 上记住 Key**。
+1. 打开 **Settings**，填写自己的 DeepSeek API Key，点击 **使用此 Key**。默认仅在本次运行内存中保留；macOS 可勾选 **在这台 Mac 上记住 Key**。提交时只读已启用的内存 Key，记住与恢复在后台完成。
 2. 使用 Codex 评审时，先安装[官方 Codex CLI](https://learn.chatgpt.com/docs/codex-cli)，在终端运行 `codex login`。已登录的用户直接点击 **Check Connection**，无需再走浏览器。
 3. 选择考试与题型，输入题目，或导入题目图片。
 4. 点击 **开始答题**，在沉浸式界面完成作文，然后 **交卷**。
@@ -68,7 +73,7 @@ macOS 当前是本地 ad-hoc 签名版本，尚未经过 Apple Developer ID 公�
 
 </div>
 
-以上是 macOS 版的默认配置，每个角色都可独立选择 Provider。A 检查考试任务和整体质量，B 深入检查语言，C 从原题与原稿重新作出判断。三者并行运行、互不读取对方输出，只有完整且有效的结构化结果才会交给本机计算中位数。
+以上是 macOS / Windows 版的默认配置，每个角色都可独立选择 Provider。Android 使用三位独立 DeepSeek 评审，手机无需连接电脑。A 检查考试任务和整体质量，B 深入检查语言，C 从原题与原稿重新作出判断。三者并行运行、互不读取对方输出，只有完整且有效的结构化结果才会交给本机计算中位数。
 
 - **DeepSeek**：官方 API，使用用户自行填写的 Key。
 - **ChatGPT · via Codex**：官方本机 CLI，复用用户已有的 ChatGPT 登录，使用 Codex 额度。
@@ -89,11 +94,13 @@ macOS 当前是本地 ad-hoc 签名版本，尚未经过 Apple Developer ID 公�
     确认后才进入三评
 ```
 
-OCR 误识别不应被算成学生的拼写错误。题目、手写作文或混合照片都先经过确认页。图表题需把关键数据与图意补充到题目文字中，再进行文本评阅。
+OCR 误识别不应被算成学生的拼写错误。题目、手写作文或混合照片都先经过确认页。macOS 可分别整理混合照片中的题目和答案；Windows / Android 可按两种用途分别导入并保留对应文字。图表题需把关键数据与图意补充到题目文字中，再进行文本评阅。
 
 ## 原生界面与图标
 
-白色纸面、克制的蓝色、清晰的层级。macOS 使用 SwiftUI 与 AppKit，输入和窗口行为保持原生。手机端会围绕触屏、软键盘和分段阅读重新组织布局。
+<p align="center"><img src="Documentation/Images/windows.png" width="100%" alt="WriteBench 原生 Windows 界面，考研、六级与雅思考试入口" /></p>
+
+白色纸面、克制的蓝色、清晰的层级。macOS 使用 SwiftUI 与 AppKit，输入和窗口行为保持原生。Windows 使用 WPF；Android 使用原生 Views。手机布局围绕考试选择、固定开始按钮、软键盘与纵向阅读组织，避免把桌面侧栏缩进小屏。
 
 <p align="center"><img src="Design/Icon/WriteBench-icon-preview.png" width="100%" alt="WriteBench 原版与精修 W 图标、小尺寸检查及深色品牌资源" /></p>
 
@@ -122,14 +129,19 @@ WriteBench/          SwiftUI、领域模型、原生服务与 SwiftData
 WriteBenchTests/     评分、并发、持久化、OCR 与子进程测试
 Design/Icon/         可编辑图标与多尺寸导出
 Documentation/      使用说明、验证记录与 Provider 架构
+platforms/windows/   WPF 原生应用、OCR 与本地评分
+platforms/android/   Android Studio 项目与手机界面
 scripts/             构建、图标生成与显式联调脚本
 ```
 
-当前自动化测试覆盖 27 个案例。GPT-6 Astra/MAX 已通过实际 Swift 子进程完成样例评卷；DeepSeek 已验证官方模型接口连接。完整混合三评需用户填入有效 Key 后使用。
+macOS 自动化测试覆盖 29 个案例，Android 有 5 个领域测试；Windows 通过评分、持久化、字段校验及实际 OCR 自检。GPT-6 Astra/MAX 已通过实际 Swift 子进程完成样例评卷；DeepSeek 已验证官方模型接口连接。完整混合三评需用户填入有效 Key 后使用。
 
 <details>
 <summary><strong>更多文档</strong></summary>
 
+- [Windows 构建与使用](platforms/windows/README.md)
+- [Android Studio 构建与使用](platforms/android/README.md)
+- [第三方组件说明](THIRD_PARTY_NOTICES.md)
 - [macOS 完整使用说明](Documentation/macOS-guide.md)
 - [Provider 架构与认证边界](Documentation/Providers.md)
 - [构建与验证记录](Documentation/Validation.md)

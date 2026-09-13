@@ -1,3 +1,33 @@
+# 1.3.0 validation · 2026-09-13
+
+## macOS
+
+- Xcode 26.6, macOS 26.6.2; deployment target macOS 15.
+- 29 Swift tests pass, including independent concurrency, strict JSON, local median/spread, cancellation, provider routing, subprocess timeout/cancellation, SwiftData, real Vision OCR, mandatory immersion, rewrite persistence, missing credentials, and Chinese translation submission.
+- Checked the actual native English II preparation and full-screen answer sheet. Chinese text enables Hand In. No live word counter appears.
+- Found and fixed a real legacy Keychain call blocking the UI. Verified the final native Hand In flow immediately displays the missing DeepSeek API Key alert and retains the draft. Submissions now read memory only; explicit persistence/restoration happens in the background using a new data-protection Keychain item. Legacy development items are untouched.
+- Universal arm64 + x86_64 Release build; signature and disk image checks recorded with published artifacts.
+
+## Windows preview 0.1.0
+
+- Built on Windows 11 x64 with .NET SDK 10.0.401. Native WPF executable; self-contained .NET runtime.
+- Actual executable self-test passes median, spread, missing/duplicate reviewers, task scales, bundled rubrics, required JSON properties, serialization, and real Tesseract OCR of the repository's synthetic image.
+- The real WPF preparation view was rendered at 1320 × 840 for visual inspection with an isolated temporary store. This is view rendering, not a manual live network grading test.
+- Eight tasks, independent DeepSeek/Codex configuration, OCR confirmation, history, rewrite and basic statistics implemented. Windows Codex was not logged in on the test host, so no claim of Windows Codex live grading is made.
+
+## Android preview 0.1.0
+
+- Built using the user's installed Android Studio JBR and SDK: Gradle 8.13, AGP 8.13.2, compile/target SDK 35, minimum API 33.
+- Five JUnit tests cover translation directions/scales, Chinese answer aggregation, disagreement, incomplete/duplicate judges, exact correction spans and missing-Key rejection.
+- Signed release APK passes apksigner verification and installs successfully on the Android 15 ARM64 emulator. Native UI inspection results are recorded below after the final check.
+- On-device ML Kit OCR is bundled for Chinese and Latin text. Three real DeepSeek providers are required; no demo grading is in the shipped app.
+
+## Live provider scope
+
+GPT-6 Astra/MAX completed a sample through the actual macOS Swift subprocess service. DeepSeek's official models endpoint was verified with the temporary user-supplied Key. That Key was not committed and has expired. A complete mixed three-provider paid grading session is not claimed as verified; users must enter their own current Key.
+
+---
+
 # WriteBench 1.1.0 — validation
 
 2026-09-13, Xcode 26.6, Swift 6.

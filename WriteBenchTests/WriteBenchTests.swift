@@ -279,3 +279,35 @@ private struct UnavailableGrader: EssayGradingService {
     #expect(store.stage == .answering)
     #expect(try context.fetchCount(FetchDescriptor<EssaySession>()) == 0)
 }
+
+@Test func translationRubricsDirectionsAndChinesePrompt() throws {
+    #expect(WritingTask.kaoyanTranslation.maxScore == 10)
+    #expect(WritingTask.kaoyan2Translation.maxScore == 15)
+    #expect(WritingTask.cet6Translation.maxScore == 15)
+    #expect(WritingTask.kaoyan2Translation.targetLanguage == "Simplified Chinese")
+    #expect(WritingTask.cet6Translation.targetLanguage == "English")
+    for task in WritingTask.allCases.filter(\.isTranslation) {
+        let rubric = try RubricLoader.load(task)
+        let evidence = GradingInput(task: task, question: task.sampleQuestion, essay: "学习需要耐心。", rubric: rubric)
+        let prompt = GraderPrompt.system(judge: .c, input: evidence)
+        #expect(prompt.contains("translation fidelity"))
+        #expect(prompt.contains("Keep corrected text and improvedVersion in \(task.targetLanguage)"))
+        #expect(!prompt.contains("replacement English text"))
+        #expect(task.targetWords == 0)
+    }
+}
+@Test @MainActor func chineseTranslationCanBeSubmittedAndPersisted() async throws {
+    let container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let context = ModelContext(container)
+    let store = WritingStore(); store.attach(context); store.select(.kaoyan2Translation)
+    store.essay = "学习一项新技能通常始于一种不适感：我们知道自己想达到什么目标，却还不能做得很好。"
+    #expect(WordCounter.count(store.essay) == 0)
+    #expect(store.startAnswering())
+    #expect(!store.showsLiveWordCount)
+    var saved: EssaySession?
+    store.submit(service: RecordingGrader(), isDemo: true) { saved = $0 }
+    let grading = try #require(store.gradingTask); await grading.value
+    #expect(saved?.originalEssay == store.essay)
+    #expect(saved != nil)
+    #expect(try context.fetchCount(FetchDescriptor<EssaySession>()) == 1)
+}

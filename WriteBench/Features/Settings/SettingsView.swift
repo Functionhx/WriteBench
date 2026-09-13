@@ -37,7 +37,7 @@ struct SettingsView: View {
                         Text("默认：\(DeepSeekClient.defaultModel) · MAX 思考。模型 ID 可修改，不会自动切换。").font(.system(size: 11)).foregroundStyle(WB.secondary)
                         HStack {
                             Button { testConnection() } label: { Label(testing ? "Connecting…" : "Test connection", systemImage: "network") }.buttonStyle(QuietButtonStyle()).disabled(!keyExists || testing)
-                            if keyExists { Button("清除 Key") { do { DeepSeekCredentials.clearSession(); try KeychainService.remove(); keyExists = false; failed = false; status = "API Key 已移除。" } catch { showError(error) } }.buttonStyle(QuietButtonStyle()) }
+                            if keyExists { Button("清除 Key") { Task { do { try await DeepSeekCredentials.forget(); keyExists = false; failed = false; status = "API Key 已移除。" } catch { showError(error) } } }.buttonStyle(QuietButtonStyle()) }
                             Spacer()
                         }
                         if let status { Label(status, systemImage: failed ? "exclamationmark.circle" : "checkmark.circle").font(.system(size: 12)).foregroundStyle(failed ? WB.amber : WB.green).textSelection(.enabled) }
@@ -52,9 +52,9 @@ struct SettingsView: View {
                         settingsNote("Exam scales", "英语一：小作文 / 10，大作文 / 20；CET-6 写作原始分 / 15；IELTS 单项任务 band / 9。")
                     }
                 }
-                HStack(spacing: 10) { BrandMark(size: 24); Text("WriteBench 1.2").font(.system(size: 12, weight: .medium)); Text("Made for a more deliberate writing practice.").font(.system(size: 11)).foregroundStyle(WB.secondary) }.padding(.top, 4)
+                HStack(spacing: 10) { BrandMark(size: 24); Text("WriteBench 1.3").font(.system(size: 12, weight: .medium)); Text("Made for a more deliberate writing practice.").font(.system(size: 11)).foregroundStyle(WB.secondary) }.padding(.top, 4)
             }.frame(maxWidth: 860).padding(32).frame(maxWidth: .infinity, alignment: .leading)
-        }.onAppear { keyExists = DeepSeekCredentials.hasSessionKey || ((try? DeepSeekCredentials.load()) != nil) }
+        }.task { await DeepSeekCredentials.restoreRememberedKey(); keyExists = DeepSeekCredentials.hasSessionKey }
     }
     private var providerCard: some View {
         Card {
@@ -103,8 +103,18 @@ struct SettingsView: View {
         HStack(alignment: .top, spacing: 20) { Text(title).font(.system(size: 12, weight: .medium)).frame(width: 110, alignment: .leading); Text(detail).font(.system(size: 12)).foregroundStyle(WB.secondary).lineSpacing(4) }
     }
     private func saveKey() {
-        do { try DeepSeekCredentials.use(key, remember: rememberKey); key = ""; keyExists = true; failed = false; status = rememberKey ? "Key 已保存到 Keychain，可以交卷。" : "Key 已启用，仅保留在本次运行内存中。现在可以交卷。" }
-        catch { keyExists = DeepSeekCredentials.hasSessionKey; key = ""; failed = true; status = keyExists ? "Key 已启用，但无法记住；本次仍可正常评卷，下次启动请重新填写。" : error.localizedDescription }
+        let supplied = key
+        do {
+            try DeepSeekCredentials.use(supplied, remember: rememberKey)
+            key = ""; keyExists = true; failed = false
+            status = "Key 已启用，仅保留在本次运行内存中。现在可以交卷。"
+            if rememberKey {
+                Task {
+                    do { try await DeepSeekCredentials.remember(supplied); status = "Key 已保存到 Keychain，可以交卷。" }
+                    catch { failed = true; status = "Key 已启用，但无法记住；本次仍可正常评卷，下次启动请重新填写。" }
+                }
+            }
+        } catch { showError(error) }
     }
     private func showError(_ error: Error) { failed = true; status = error.localizedDescription }
     private func testConnection() {

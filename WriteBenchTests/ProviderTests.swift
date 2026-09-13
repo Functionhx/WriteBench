@@ -109,4 +109,5 @@ private actor CodexFixtureRunner: ProcessRunning {
     #expect(UserDefaults.standard.string(forKey: "deepSeekAPIKey") == nil)
     DeepSeekCredentials.clearSession()
     #expect(!DeepSeekCredentials.hasSessionKey)
+    #expect(throws: GradingError.self) { try DeepSeekCredentials.load() }
 }

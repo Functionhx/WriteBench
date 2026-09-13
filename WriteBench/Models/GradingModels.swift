@@ -8,7 +8,7 @@ enum Judge: String, CaseIterable, Codable, Identifiable, Sendable {
 }
 
 enum MistakeCategory: String, CaseIterable, Codable, Identifiable, Sendable {
-    case collocation = "Collocation", articles = "Articles", grammar = "Grammar", wordChoice = "Word choice", chinglish = "Chinglish", register = "Register", taskOmission = "Task omission", coherence = "Coherence", spelling = "Spelling"
+    case collocation = "Collocation", articles = "Articles", grammar = "Grammar", wordChoice = "Word choice", chinglish = "Chinglish", register = "Register", taskOmission = "Task omission", coherence = "Coherence", spelling = "Spelling", mistranslation = "Mistranslation", omission = "Omission", addition = "Addition"
     var id: String { rawValue }
 }
 enum Severity: String, Codable, Sendable { case major, minor }

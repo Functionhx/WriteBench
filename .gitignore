@@ -25,3 +25,7 @@ local.properties
 **/obj/
 **/build/
 Documentation/codex-live-check.json
+
+# Per-machine IDE settings
+.idea/
+*.iml

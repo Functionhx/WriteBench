@@ -37,8 +37,8 @@ struct WritingView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 VStack(alignment: .leading, spacing: 9) {
-                    Text("准备写作").font(.system(size: 26, weight: .semibold))
-                    Text("选好题目，开始一段安静的写作。").font(.system(size: 14)).foregroundStyle(WB.secondary)
+                    Text(store.task.isTranslation ? "准备翻译" : "准备写作").font(.system(size: 26, weight: .semibold))
+                    Text(store.task.isTranslation ? store.task.wordGuidance : "选好题目，开始一段安静的写作。").font(.system(size: 14)).foregroundStyle(WB.secondary)
                 }
                 taskTabs
                 questionCard
