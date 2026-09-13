@@ -16,7 +16,7 @@ struct ImmersiveWritingView: View {
                 Text(store.task.fullTitle).font(.system(size: 13, weight: .medium)).foregroundStyle(WB.secondary)
                 Spacer()
                 Label(store.timerText, systemImage: "clock").font(.system(size: 14)).monospacedDigit().foregroundStyle(WB.ink).accessibilityLabel("作答用时 \(store.timerText)")
-                Button("交卷", action: onSubmit).buttonStyle(ExamSubmitStyle()).disabled(store.words == 0 || store.isGrading || isRecognizing).keyboardShortcut(.return, modifiers: .command).accessibilityIdentifier("handInEssay")
+                Button("交卷", action: onSubmit).buttonStyle(ExamSubmitStyle()).disabled(store.essay.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isGrading || isRecognizing).keyboardShortcut(.return, modifiers: .command).accessibilityIdentifier("handInEssay")
             }.padding(.horizontal, 32).frame(height: 62)
             Rectangle().fill(Color.black.opacity(0.07)).frame(height: 1)
             HSplitView {
@@ -30,7 +30,7 @@ struct ImmersiveWritingView: View {
                     VStack(spacing: 20) {
                         ProgressView().controlSize(.regular)
                         Text(store.isGrading ? "正在评阅" : "正在识别手写稿").font(.system(size: 20, weight: .medium))
-                        Text(store.isGrading ? "三位评审正在独立阅读你的作文。" : "识别后请逐页校对，再确认评分。").font(.system(size: 13)).foregroundStyle(WB.secondary)
+                        Text(store.isGrading ? "三位评审正在独立评阅你的作答。" : "识别后请逐页校对，再确认评分。").font(.system(size: 13)).foregroundStyle(WB.secondary)
                         Button("取消") { if store.isGrading { store.gradingTask?.cancel() } else { onCancelOCR() } }.buttonStyle(QuietButtonStyle())
                     }
                 }

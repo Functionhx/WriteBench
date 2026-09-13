@@ -1,3 +1,15 @@
+# 1.3.0 · 翻译练习与原生多端
+
+- 新增考研英语一英译汉（10 分）、英语二英译汉（15 分）、六级汉译英（15 分），共用沉浸式作答、真实三评、历史与重写。
+- 考试入口使用毕业帽、书本、地球分类图标；题型标签保持简洁。
+- 修复 macOS 缺少 Key 时旧开发版 Keychain 读取阻塞：提交只读内存，安全保存/恢复为明确选择的后台操作。旧凭证不自动读取。
+- 发布首个 Windows WPF 和 Android 原生预览包（各 0.1.0）。手机端专门设计竖向布局、固定开始按钮、题型滑动标签与软键盘适配。
+- 三端采用 DeepSeek V4 Pro / MAX；桌面可选官方 Codex CLI / GPT-6 Astra / MAX。Android 的三位评审均为 DeepSeek。
+- 新增翻译忠实度、误译、漏译、增译反馈；中文答案不受英文单词计数限制。
+- macOS 29 项测试、Android 5 项领域测试与 2 项设备服务测试、Windows 实际运行/OCR 自检，以及 GitHub 原生构建工作流。详细范围见 Documentation/Validation.md。
+
+macOS 本地 ad-hoc 签名，未公证；Windows 无 Authenticode 签名；Android 使用独立保管的发布签名。模型可用性取决于用户自己的服务账户。
+
 # WriteBench 1.2.0
 
 - 三评服务独立选择，默认 DeepSeek V4 Pro / DeepSeek V4 Pro / GPT-6 Astra（官方 Codex CLI），全部 MAX 思考。

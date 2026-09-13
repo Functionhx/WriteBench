@@ -1,0 +1,42 @@
+name: Native builds
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build and test SwiftUI app
+        run: xcodebuild -project WriteBench.xcodeproj -scheme WriteBench -configuration Debug -derivedDataPath build -destination 'platform=macOS' CODE_SIGN_IDENTITY=- test
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Publish WPF app
+        run: dotnet publish platforms/windows/WriteBench/WriteBench.csproj -c Release -r win-x64 --self-contained true -o publish
+      - name: Validate domain and real OCR
+        shell: pwsh
+        run: |
+          Copy-Item Documentation/TestImages/ocr-sample-1.png publish/ocr-fixture.png
+          $result = Start-Process "$pwd/publish/WriteBench.exe" -ArgumentList '--self-test' -Wait -PassThru
+          if ($result.ExitCode -ne 0) { Get-Content publish/self-test-error.txt; exit 1 }
+          Get-Content publish/self-test-passed.txt
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build APK and run unit tests
+        working-directory: platforms/android
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --no-daemon

@@ -2,9 +2,9 @@ import Foundation
 import Security
 
 enum KeychainService {
-    private static let service = "com.chen.WriteBench.deepseek"
+    private static let service = "com.chen.WriteBench.deepseek.v2"
     private static let account = "api-key"
-    private static var query: [String: Any] { [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account] }
+    private static var query: [String: Any] { [kSecUseDataProtectionKeychain as String: true, kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: account] }
     static func save(_ key: String) throws {
         let clean = key.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else { throw GradingError.missingKey }

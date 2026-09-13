@@ -8,7 +8,7 @@ struct ReviewView: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Label("Writing review", systemImage: "checkmark.seal").font(.system(size: 16, weight: .semibold)).labelStyle(BlueIconLabelStyle())
+                Label(session.task.isTranslation ? "Translation review" : "Writing review", systemImage: "checkmark.seal").font(.system(size: 16, weight: .semibold)).labelStyle(BlueIconLabelStyle())
                 Spacer()
                 Text(session.task.fullTitle).foregroundStyle(WB.secondary)
                 IconButton(symbol: "xmark", help: "Close review") { dismiss() }
@@ -36,7 +36,7 @@ struct ReviewView: View {
                         Card {
                             VStack(alignment: .leading, spacing: 20) {
                                 HStack { Text("At a glance").font(.system(size: 17, weight: .semibold)); Spacer(); Text("Diagnostic scale · / 10").font(.system(size: 11)).foregroundStyle(WB.secondary) }
-                                dimension("Task Completion", value: report.dimension(\.taskCompletion))
+                                dimension(session.task.isTranslation ? "Meaning & completeness" : "Task Completion", value: report.dimension(\.taskCompletion))
                                 dimension("Language", value: report.dimension(\.language))
                                 dimension("Coherence", value: report.dimension(\.coherence))
                                 dimension("Register", value: report.dimension(\.register))
@@ -65,8 +65,8 @@ struct ReviewView: View {
                         }
                         Card {
                             VStack(alignment: .leading, spacing: 16) {
-                                HStack { Text("Improved version").font(.system(size: 18, weight: .semibold)); Spacer(); Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(session.correctedEssay, forType: .string) } label: { Label("Copy", systemImage: "doc.on.doc") }.buttonStyle(QuietButtonStyle()) }
-                                Text("Language reviewer’s suggested revision").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                                HStack { Text(session.task.isTranslation ? "参考改译" : "Improved version").font(.system(size: 18, weight: .semibold)); Spacer(); Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(session.correctedEssay, forType: .string) } label: { Label("Copy", systemImage: "doc.on.doc") }.buttonStyle(QuietButtonStyle()) }
+                                Text(session.task.isTranslation ? "结合原文检查译义与表达，参考译文并非唯一正确答案。" : "Language reviewer’s suggested revision").font(.system(size: 12)).foregroundStyle(WB.secondary)
                                 Text(session.correctedEssay).font(.system(size: 15)).lineSpacing(7).textSelection(.enabled)
                             }
                         }
@@ -92,7 +92,7 @@ struct ReviewView: View {
                                 HStack { Spacer(); Button(session.finalRewrite.isEmpty ? "开始重写" : "继续重写") { onRewrite(session) }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("startRewrite") }
                             }
                         }
-                        Text("\(session.wordCount) words · \(Int(session.writingDuration / 60)) min · \(session.inputMode.capitalized) · \(session.date.formatted(date: .abbreviated, time: .shortened))\nRubric \(session.rubricVersion) · Prompt \(session.graderPromptVersion) · \(session.modelName)").font(.system(size: 10)).foregroundStyle(WB.secondary).textSelection(.enabled)
+                        Text("\(session.task.targetLanguage == "Simplified Chinese" ? "\(session.originalEssay.count) characters" : "\(session.wordCount) words") · \(Int(session.writingDuration / 60)) min · \(session.inputMode.capitalized) · \(session.date.formatted(date: .abbreviated, time: .shortened))\nRubric \(session.rubricVersion) · Prompt \(session.graderPromptVersion) · \(session.modelName)").font(.system(size: 10)).foregroundStyle(WB.secondary).textSelection(.enabled)
                     } else {
                         EmptyState(symbol: "exclamationmark.triangle", title: "Unable to read this review", detail: "The saved review data is invalid. Your original question and essay are preserved below.")
                         Card { VStack(alignment: .leading, spacing: 20) { Text(session.question).foregroundStyle(WB.secondary); Text(session.originalEssay) }.textSelection(.enabled) }

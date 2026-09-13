@@ -20,7 +20,7 @@ import SwiftData
     }
     var body: some Scene {
         Window("WriteBench", id: "workspace") {
-            if let container { WorkspaceView().modelContainer(container).preferredColorScheme(.light) }
+            if let container { WorkspaceView().modelContainer(container).preferredColorScheme(.light).task { await DeepSeekCredentials.restoreRememberedKey() } }
             else { VStack(spacing: 18) { Text("WriteBench could not open local storage").font(.title2); Text(storageError ?? "Unknown storage error").textSelection(.enabled); Text("Your files have not been reset. Restart the app or check available disk space.").foregroundStyle(.secondary) }.padding(40).frame(width: 600, height: 300) }
         }
         .windowStyle(.hiddenTitleBar).windowToolbarStyle(.unified).defaultSize(width: 1440, height: 900)

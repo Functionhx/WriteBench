@@ -134,7 +134,7 @@ enum WritingStage { case preparation, answering, grading }
     func submit(service: any EssayGradingService, isDemo: Bool, onComplete: @escaping (EssaySession) -> Void) {
         guard stage == .answering else { error = "请先点击开始答题。"; return }
         guard let context else { return }
-        guard !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, words > 0 else { error = "请先填写题目与作文。"; return }
+        guard !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !essay.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { error = "请先填写题目与作答内容。"; return }
         tick(); guard persistDraft() else { return }
         do {
             let input = GradingInput(task: task, question: question, essay: essay, rubric: try RubricLoader.load(task))
