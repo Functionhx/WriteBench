@@ -60,6 +60,26 @@ enum WritingStage { case preparation, answering, grading }
     func textChanged() {
         queueSave()
     }
+    @discardableResult func importQuestion(text: String, title: String) -> Bool {
+        guard stage == .preparation else { return false }
+        do {
+            let prompt = try QuestionTextReader.validated(text)
+            guard persistDraft() else { return false }
+            let previous = (question, questionLabel, questionImage, rewriteSessionID)
+            saveTask?.cancel()
+            question = prompt
+            let name = title.trimmingCharacters(in: .whitespacesAndNewlines)
+            questionLabel = name.isEmpty ? "文字导入" : name
+            questionImage = nil
+            rewriteSessionID = nil
+            guard persistDraft() else {
+                context?.rollback()
+                (question, questionLabel, questionImage, rewriteSessionID) = previous
+                return false
+            }
+            return true
+        } catch { self.error = error.localizedDescription; return false }
+    }
     func queueSave() {
         saveTask?.cancel(); saveStatus = "正在保存…"
         saveTask = Task { [weak self] in

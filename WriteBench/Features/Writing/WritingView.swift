@@ -8,6 +8,7 @@ struct WritingView: View {
     @State private var isRecognizing = false
     @State private var ocrTask: Task<Void, Never>?
     @State private var editingQuestion = false
+    @State private var importingText = false
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     var body: some View {
         Group {
@@ -29,6 +30,13 @@ struct WritingView: View {
             }
         }
         .sheet(isPresented: $store.showLibrary) { QuestionLibraryView(store: store) }
+        .sheet(isPresented: $importingText) {
+            TextQuestionImportView(task: store.task, hasAnswer: !store.essay.isEmpty) { text, title in
+                let saved = store.importQuestion(text: text, title: title)
+                if saved { editingQuestion = false }
+                return saved
+            }
+        }
         .onDisappear { ocrTask?.cancel(); store.persistDraft() }
         .onChange(of: store.question) { _, _ in store.queueSave() }
         .onChange(of: store.essay) { _, _ in store.textChanged() }
@@ -79,7 +87,7 @@ struct WritingView: View {
             HStack {
                 Text("题目").font(.system(size: 15, weight: .semibold))
                 Spacer()
-                Text(store.questionLabel).font(.system(size: 12)).foregroundStyle(WB.secondary)
+                Text(store.questionLabel).font(.system(size: 12)).foregroundStyle(WB.secondary).lineLimit(1).help(store.questionLabel)
                 IconButton(symbol: editingQuestion ? "checkmark" : "pencil", help: editingQuestion ? "完成编辑" : "编辑题目") { editingQuestion.toggle() }
             }
             if editingQuestion {
@@ -93,6 +101,9 @@ struct WritingView: View {
             HStack {
                 Text(store.task.fullTitle).font(.system(size: 11)).foregroundStyle(WB.secondary)
                 Spacer()
+                Button { importingText = true } label: { Label("导入文字", systemImage: "doc.text") }
+                    .buttonStyle(QuietButtonStyle()).disabled(isRecognizing)
+                    .accessibilityIdentifier("importQuestionText")
                 Button { importImages(.question) } label: { Label("导入题目图片", systemImage: "photo") }.buttonStyle(QuietButtonStyle()).disabled(isRecognizing)
             }
         }.padding(28).background(.white, in: RoundedRectangle(cornerRadius: 12)).overlay(RoundedRectangle(cornerRadius: 12).stroke(WB.line.opacity(0.8)))

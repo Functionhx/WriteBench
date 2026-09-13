@@ -1,3 +1,10 @@
+# 1.3.1 validation · 2026-09-13
+
+- 33 Swift tests pass. New coverage includes Chinese/English UTF-8 (with/without BOM), UTF-16 LE/BE, paragraph normalization, rejected empty/binary/oversized input, a real text-file read, per-task SwiftData persistence, answer/image/time preservation, and detachment from a historical rewrite even when the new question text is identical.
+- In a separate app copy with an in-memory store, inspected the actual native import sheet and verified paste → Command-Return → question refill, disabled empty submission, and Escape cancellation without changing the question. The user's active writing session was left untouched.
+- Text file decoding and disk reads are tested; native file-picker automation could navigate and preview the fixture but did not complete confirmation. This interaction still needs a normal user check. The app uses AppKit's asynchronous NSOpenPanel with text/Markdown content types.
+- macOS version 1.3.1 (6), Universal arm64 + x86_64. No persistence schema change; Windows and Android remain 0.1.0.
+
 # 1.3.0 validation · 2026-09-13
 
 ## macOS

@@ -43,7 +43,7 @@ struct PlainTextEditor: NSViewRepresentable {
         view.typingAttributes = [.font: view.font ?? NSFont.systemFont(ofSize: fontSize), .foregroundColor: NSColor(WB.ink), .paragraphStyle: style]
         view.delegate = context.coordinator
         view.setAccessibilityIdentifier(identifier)
-        let labels = ["essayEditor": "我的作文", "questionEditor": "题目文字", "rewriteEditor": "重写作文", "ocrEssayEditor": "识别文字校对", "ocrQuestionEditor": "识别题目校对"]
+        let labels = ["essayEditor": "我的作文", "questionEditor": "题目文字", "textQuestionImportEditor": "导入题目文字", "rewriteEditor": "重写作文", "ocrEssayEditor": "识别文字校对", "ocrQuestionEditor": "识别题目校对"]
         view.setAccessibilityLabel(labels[identifier] ?? "Writing editor")
         scroll.documentView = view
         return scroll
