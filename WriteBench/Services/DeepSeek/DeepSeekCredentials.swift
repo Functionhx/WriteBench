@@ -5,12 +5,12 @@ import Foundation
     private static var sessionKey: String?
     private static let rememberPreference = "rememberDeepSeekKeyV2"
     static var hasSessionKey: Bool { sessionKey != nil }
-    static func use(_ value: String, remember: Bool) throws {
+    static func use(_ value: String, remember: Bool, defaults: UserDefaults = .standard) throws {
         let key = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !key.isEmpty else { throw GradingError.missingKey }
         sessionKey = key
         // The caller performs optional persistence off the UI thread.
-        if !remember { UserDefaults.standard.set(false, forKey: rememberPreference) }
+        if !remember { defaults.set(false, forKey: rememberPreference) }
     }
     static func remember(_ value: String) async throws {
         let key = value.trimmingCharacters(in: .whitespacesAndNewlines)

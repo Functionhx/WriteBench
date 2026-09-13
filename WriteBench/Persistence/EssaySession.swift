@@ -22,11 +22,13 @@ import SwiftData
     var modelName: String
     var timestamp: Date
     var isDemo: Bool
+    // Optional for lightweight migration of reviews saved before revision tracking.
+    var parentSessionID: UUID? = nil
     @Attribute(.externalStorage) var questionImage: Data?
     @Attribute(.externalStorage) var sourceImages: Data?
     var task: WritingTask { WritingTask(rawValue: subtype) ?? .kaoyanSmall }
     var report: GradingReport? { try? JSONDecoder().decode(GradingReport.self, from: reviewerResults) }
-    init(task: WritingTask, question: String, essay: String, duration: Double, inputMode: InputMode, report: GradingReport, questionImage: Data? = nil, sourceImages: [Data] = []) throws {
+    init(task: WritingTask, question: String, essay: String, duration: Double, inputMode: InputMode, report: GradingReport, questionImage: Data? = nil, sourceImages: [Data] = [], parentSessionID: UUID? = nil) throws {
         id = UUID(); date = Date(); exam = task.exam.rawValue; subtype = task.rawValue
         self.question = question; originalEssay = essay; correctedEssay = report.improvedVersion; finalRewrite = ""
         writingDuration = duration; wordCount = WordCounter.count(essay); self.inputMode = inputMode.rawValue
@@ -34,6 +36,7 @@ import SwiftData
         detectedMistakes = try JSONEncoder().encode(report.corrections); rubricVersion = report.rubricVersion; graderPromptVersion = report.promptVersion
         modelName = Array(Set(report.reviewers.map(\.model))).sorted().joined(separator: ", ")
         timestamp = report.timestamp; isDemo = report.isDemo; self.questionImage = questionImage
+        self.parentSessionID = parentSessionID
         self.sourceImages = sourceImages.isEmpty ? nil : try JSONEncoder().encode(sourceImages)
     }
 }

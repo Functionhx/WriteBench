@@ -185,7 +185,6 @@ private actor FixtureTransport: HTTPTransport {
     #expect(store.error != nil)
     #expect(store.startAnswering())
     #expect(store.isInSession && store.timerRunning)
-    #expect(!store.showsLiveWordCount)
     store.select(.cet6Writing)
     #expect(store.task == .kaoyanSmall) // An active session cannot switch exams.
     #expect(store.leaveAnswering())
@@ -195,8 +194,8 @@ private actor FixtureTransport: HTTPTransport {
     #expect(restored.stage == .preparation)
     #expect(restored.startAnswering())
     #expect(restored.leaveAnswering())
-    restored.select(.cet6Writing); #expect(!restored.showsLiveWordCount)
-    restored.select(.ieltsTask2); #expect(restored.showsLiveWordCount)
+    restored.select(.cet6Writing); #expect(restored.task == .cet6Writing)
+    restored.select(.ieltsTask2); #expect(restored.task == .ieltsTask2)
 }
 @Test @MainActor func handInSavesThenReturnsToPreparation() async throws {
     let container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
@@ -205,7 +204,7 @@ private actor FixtureTransport: HTTPTransport {
     #expect(store.startAnswering())
     var savedID: UUID?
     store.submit(service: RecordingGrader(), isDemo: true) { savedID = $0.id }
-    #expect(store.stage == .grading && !store.timerRunning)
+    #expect(store.stage == .preparation && store.isGrading && !store.timerRunning)
     #expect(!store.leaveAnswering())
     let grading = try #require(store.gradingTask); await grading.value
     #expect(savedID != nil)
@@ -215,15 +214,16 @@ private actor FixtureTransport: HTTPTransport {
 private struct UnavailableGrader: EssayGradingService {
     func grade(_ input: GradingInput, judge: Judge) async throws -> ReviewerResult { throw GradingError.http(503) }
 }
-@Test @MainActor func failedGradingReturnsToImmersionWithoutLosingAnswer() async throws {
+@Test @MainActor func failedGradingRetainsDraftAfterReturningToPreparation() async throws {
     let container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     let context = ModelContext(container)
     let store = WritingStore(); store.attach(context); store.essay = input().essay; store.startAnswering()
     store.submit(service: UnavailableGrader(), isDemo: false) { _ in Issue.record("A failed grade must not complete") }
     let grading = try #require(store.gradingTask); await grading.value
-    #expect(store.stage == .answering && store.timerRunning)
+    #expect(store.stage == .preparation && !store.timerRunning)
     #expect(store.essay == input().essay)
-    #expect(store.error != nil)
+    #expect(store.gradingJob?.phase == .failed)
+    #expect(store.gradingJob?.detail != nil)
     #expect(try context.fetchCount(FetchDescriptor<EssaySession>()) == 0)
 }
 @Test @MainActor func rewriteUsesImmersionAndUpdatesOriginalHistory() throws {
@@ -310,7 +310,6 @@ private struct UnavailableGrader: EssayGradingService {
     store.essay = "学习一项新技能通常始于一种不适感：我们知道自己想达到什么目标，却还不能做得很好。"
     #expect(WordCounter.count(store.essay) == 0)
     #expect(store.startAnswering())
-    #expect(!store.showsLiveWordCount)
     var saved: EssaySession?
     store.submit(service: RecordingGrader(), isDemo: true) { saved = $0 }
     let grading = try #require(store.gradingTask); await grading.value

@@ -12,15 +12,18 @@ struct WorkspaceView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var review: EssaySession?
     @State private var destination: Destination = .write
-    @State private var store = WritingStore()
+    @Bindable var store: WritingStore
     var body: some View {
         GeometryReader { geometry in
             HStack(spacing: 0) {
                 if !store.isInSession { sidebar.frame(width: 200) }
                 VStack(spacing: 0) {
                     if !store.isInSession { header }
+                    if let job = store.gradingJob {
+                        BackgroundGradingView(job: job, onCancel: store.cancelGrading, onDismiss: store.dismissGradingStatus) { review = $0 }
+                    }
                     if destination == .write {
-                        WritingView(store: store, onReview: { review = $0 }).frame(maxWidth: .infinity)
+                        WritingView(store: store).frame(maxWidth: .infinity)
 
                     } else {
                         switch destination {
@@ -39,7 +42,7 @@ struct WorkspaceView: View {
         .task { store.attach(context) }
         .onChange(of: scenePhase) { _, phase in if phase != .active { store.tick(); store.persistDraft() } }
         .onChange(of: destination) { _, next in if next != .write { store.tick(); store.persistDraft() } }
-        .sheet(item: $review) { session in ReviewView(session: session) { store.beginRewrite($0); destination = .write; review = nil } }
+        .sheet(item: $review) { session in ReviewView(session: session) { if !store.isInSession || store.leaveAnswering() { store.beginRewrite($0); destination = .write; review = nil } } }
         .alert("未配置 DeepSeek API Key", isPresented: $store.needsAPIKey) {
             Button("继续作答", role: .cancel) { }
             Button("前往设置") { if store.leaveAnswering() { destination = .settings } }

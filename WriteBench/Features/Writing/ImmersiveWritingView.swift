@@ -2,6 +2,7 @@ import SwiftUI
 
 /// The only workspace that can edit or submit an answer.
 struct ImmersiveWritingView: View {
+    @AppStorage("showLiveWordCount") private var showLiveWordCount = false
     @Bindable var store: WritingStore
     var isRecognizing: Bool
     var onSubmit: () -> Void
@@ -11,7 +12,7 @@ struct ImmersiveWritingView: View {
         VStack(spacing: 0) {
             HStack(spacing: 24) {
                 Button { store.leaveAnswering() } label: { Label("保存并离开", systemImage: "chevron.left") }
-                    .buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(WB.secondary).disabled(store.isGrading || isRecognizing).accessibilityIdentifier("leaveAnswering")
+                    .buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(WB.secondary).disabled(isRecognizing).accessibilityIdentifier("leaveAnswering")
                 Spacer()
                 Text(store.task.fullTitle).font(.system(size: 13, weight: .medium)).foregroundStyle(WB.secondary)
                 Spacer()
@@ -25,13 +26,13 @@ struct ImmersiveWritingView: View {
             }.padding(.horizontal, 24).padding(.vertical, 28)
         }.background(.white).foregroundStyle(WB.ink)
             .overlay {
-                if store.isGrading || isRecognizing {
+                if isRecognizing {
                     Color.white.opacity(0.96).ignoresSafeArea()
                     VStack(spacing: 20) {
                         ProgressView().controlSize(.regular)
-                        Text(store.isGrading ? "正在评阅" : "正在识别手写稿").font(.system(size: 20, weight: .medium))
-                        Text(store.isGrading ? "三位评审正在独立评阅你的作答。" : "识别后请逐页校对，再确认评分。").font(.system(size: 13)).foregroundStyle(WB.secondary)
-                        Button("取消") { if store.isGrading { store.gradingTask?.cancel() } else { onCancelOCR() } }.buttonStyle(QuietButtonStyle())
+                        Text("正在识别手写稿").font(.system(size: 20, weight: .medium))
+                        Text("识别后请逐页校对，再确认评分。").font(.system(size: 13)).foregroundStyle(WB.secondary)
+                        Button("取消") { onCancelOCR() }.buttonStyle(QuietButtonStyle())
                     }
                 }
             }
@@ -52,9 +53,9 @@ struct ImmersiveWritingView: View {
             HStack {
                 Text(store.task.exam == .ielts ? "Answer" : "答题区").font(.system(size: 12, weight: .medium)).foregroundStyle(WB.secondary)
                 Spacer()
-                if store.showsLiveWordCount { Text("\(store.words) words").font(.system(size: 12)).monospacedDigit().foregroundStyle(WB.secondary).accessibilityIdentifier("liveWordCount") }
+                if showLiveWordCount { Text(store.task.targetLanguage == "Simplified Chinese" ? "\(store.essay.count) 字符" : "\(store.words) words").font(.system(size: 12)).monospacedDigit().foregroundStyle(WB.secondary).accessibilityIdentifier("liveWordCount") }
             }
-            PlainTextEditor(text: $store.essay, fontSize: store.task.exam == .ielts ? 18 : 20, editable: !store.isGrading, identifier: "essayEditor", ruled: store.task.exam != .ielts, requestFocus: true)
+            PlainTextEditor(text: $store.essay, fontSize: store.task.exam == .ielts ? 18 : 20, editable: true, identifier: "essayEditor", ruled: store.task.exam != .ielts, requestFocus: true)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .overlay(Rectangle().stroke(Color.black.opacity(0.12), lineWidth: 0.75))
             HStack {

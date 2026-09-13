@@ -32,15 +32,18 @@ struct GradingConfiguration: Sendable {
              codexPath: defaults.string(forKey: "codexExecutablePath") ?? "")
     }
 }
-struct ProviderRouter: EssayGradingService {
+struct ProviderRouter: StreamingEssayGradingService {
     let configuration: GradingConfiguration
     let deepSeek: (any EssayGradingService)?
     let codex: (any EssayGradingService)?
-    func grade(_ input: GradingInput, judge: Judge) async throws -> ReviewerResult {
+    func grade(_ input: GradingInput, judge: Judge, onPreview: @escaping @Sendable (String) async -> Void) async throws -> ReviewerResult {
         let provider = configuration.provider(for: judge)
         do {
             guard let service = provider == .deepSeek ? deepSeek : codex else { throw GradingError.incomplete }
-            var result = try await service.grade(input, judge: judge)
+            var result: ReviewerResult
+            if let streaming = service as? any StreamingEssayGradingService {
+                result = try await streaming.grade(input, judge: judge, onPreview: onPreview)
+            } else { result = try await service.grade(input, judge: judge) }
             result.provider = provider
             return result
         } catch is CancellationError { throw CancellationError() }

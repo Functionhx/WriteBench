@@ -1,4 +1,4 @@
-# WriteBench 1.3
+# WriteBench 1.4
 
 A real native macOS exam-writing workstation, built with Swift 6, SwiftUI, AppKit, SwiftData, Vision and Swift Charts. No web wrapper, external runtime or third-party app dependencies.
 
@@ -17,11 +17,11 @@ Double-click **WriteBench.app** in this folder, or open **WriteBench.xcodeproj**
 1. Choose 考研英语 (英语一小作文/大作文、英语一/二翻译), CET-6 writing/translation, or IELTS Academic Task 1 / Task 2.
 2. Use the supplied **original practice question**, edit/paste your own, or import an image. The pencil beside the question toggles its plain-text editor. 真题库 saves your own labelled question sources; bundled exercises are not presented as past papers.
 3. Click **开始答题** (or **⌘Return**) to enter the only answering workspace: native full-screen immersion. Preparation has no essay editor or grading button. The sidebar, exam tabs and decorative cards disappear. The question stays on the left and your answer on the right.
-4. The timer starts when you start answering. Kaoyan and CET-6 use a ruled answer area with **no live word count**; IELTS retains a small word count. This is a practice writing surface, not a claim of exact official answer-card dimensions. Native undo/redo and copy/paste remain available through standard shortcuts, without a formatting toolbar. **保存并离开** saves the draft and pauses its timer; continuing requires **开始答题** again. Switching away from the app during an active session does not stop the exam timer. Leaving macOS full screen through the system controls still leaves you in the same minimal answering workspace.
-5. Click **交卷** or press **⌘Return** while answering. Three independent graders run concurrently. Complete reviews are saved before opening, and word count is available after submission. A failed or cancelled grade returns to the same immersive answer with the draft intact. There is no non-immersive submission route.
-6. In History / Review, **开始重写** or **继续重写** enters the same immersive workspace. Rewrites automatically save back to the source review, including after closing/reopening the app. The review page itself has no alternate editable essay field. Each completed regrading is its own history record.
+4. The timer starts when you start answering. Kaoyan and CET-6 use a ruled answer area. All tasks default to **no live word count**. Enable **答题时显示词数** in Settings if wanted; Chinese translations show characters. This is a practice writing surface, not a claim of exact official answer-card dimensions. Native undo/redo and copy/paste remain available through standard shortcuts, without a formatting toolbar. **保存并离开** saves the draft and pauses its timer; continuing requires **开始答题** again. Switching away from the app during an active session does not stop the exam timer. Leaving macOS full screen through the system controls still leaves you in the same minimal answering workspace.
+5. Click **交卷** or press **⌘Return** while answering. The app immediately returns to preparation while three independent graders run in the background. The status strip shows actual completed reviewers, elapsed time and submitted word count. Switch pages, edit another draft or minimize the window; use **查看进度** for streamed DeepSeek comments. Codex feedback arrives when its structured result completes. Open the final review yourself when ready. Failure or cancellation never overwrites the current draft or produces a partial total. Quitting the app interrupts unfinished grading. There is no non-immersive submission route.
+6. In History / Review, **开始重写** or **继续重写** enters the same immersive workspace. Rewrites automatically save back to the source review, including after closing/reopening the app. The review page itself has no alternate editable essay field. Each completed regrading retains its own review inside the same question folder. New rewrites record their source version, including branches from an older draft. Old same-question records are grouped without inventing parent links. The narrow left outline jumps to conclusions, feedback, examiner comments, corrections, the improved essay and rewrite. The review header **Copy** copies the assessment; the existing improved-essay **Copy** still copies only that essay.
 
-Drafts are kept separately for all five task types, with debounced local saves and periodic timer saves. History reopens complete reviews, including the original question, essay and imported source images. Search and exam filtering are available in History.
+Drafts are kept separately for all eight task types, with debounced local saves and periodic timer saves. Expand a question folder in History to reopen complete reviews, including the original question, essay and imported source images. Use the folder’s **… → 编辑题目信息** menu to set an optional name, question year and custom label. Year and label filters appear when those fields are used, alongside search and exam filtering. Exam and task badges always remain visible, even after renaming a folder.
 
 ## Handwritten essays and OCR
 
@@ -41,7 +41,7 @@ For **ChatGPT · via Codex**, install the official CLI and run `codex login` onc
 
 The app has no automatic provider fallback. If any judge fails, its name and provider are shown and no total score is saved. Missing DeepSeek keys preserve the draft and offer **前往设置** or **继续作答**. Codex-only configurations do not require a DeepSeek key.
 
-See [provider architecture and validation](Documentation/Providers.md). Real Codex/MAX structured grading has been validated using a synthetic essay; DeepSeek model-list connection has been validated. This native direct-distribution build is not App Sandboxed because it launches the independently installed CLI. No system security setting is changed. Existing local essays are preserved.
+See [provider architecture and validation](Providers.md). Real Codex/MAX structured grading has been validated using a synthetic essay; DeepSeek model-list connection has been validated. This native direct-distribution build is not App Sandboxed because it launches the independently installed CLI. No system security setting is changed. Existing local essays are preserved.
 
 ## Scoring and statistics
 
@@ -75,7 +75,7 @@ WriteBench/
     DeepSeek/          URLSession, in-memory credentials, optional Keychain
     Codex/             Official CLI discovery, subprocess, JSON Schema
     Grading/           Provider protocol, orchestration, validation, median
-  Rubrics/             Five bundled, versioned Markdown resources
+  Rubrics/             Eight bundled, versioned Markdown resources
 WriteBenchTests/       Domain, concurrency, transport, persistence and real OCR tests
 ```
 

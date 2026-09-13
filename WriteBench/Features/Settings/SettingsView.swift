@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @AppStorage("showLiveWordCount") private var showLiveWordCount = false
     @AppStorage("deepSeekModel") private var model = DeepSeekClient.defaultModel
     @AppStorage("judgeProviderA") private var providerA = GradingProvider.deepSeek
     @AppStorage("judgeProviderB") private var providerB = GradingProvider.deepSeek
@@ -21,6 +22,13 @@ struct SettingsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 SectionHeading(title: "A workspace of your own.", subtitle: "Settings · AI providers and local storage.")
+                Card {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Label("答题偏好", systemImage: "textformat.123").font(.system(size: 18, weight: .semibold)).labelStyle(BlueIconLabelStyle())
+                        Toggle("答题时显示词数", isOn: $showLiveWordCount).toggleStyle(.switch).accessibilityIdentifier("showLiveWordCountSetting")
+                        Text("默认关闭，交卷后再显示本次词数。开启后，所有考试的答题页显示实时计数；中文译文显示字符数。").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                    }
+                }
                 providerCard
                 codexCard
                 Card {
@@ -52,7 +60,7 @@ struct SettingsView: View {
                         settingsNote("Exam scales", "英语一：小作文 / 10，大作文 / 20；CET-6 写作原始分 / 15；IELTS 单项任务 band / 9。")
                     }
                 }
-                HStack(spacing: 10) { BrandMark(size: 24); Text("WriteBench 1.3").font(.system(size: 12, weight: .medium)); Text("Made for a more deliberate writing practice.").font(.system(size: 11)).foregroundStyle(WB.secondary) }.padding(.top, 4)
+                HStack(spacing: 10) { BrandMark(size: 24); Text("WriteBench \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")").font(.system(size: 12, weight: .medium)); Text("Made for a more deliberate writing practice.").font(.system(size: 11)).foregroundStyle(WB.secondary) }.padding(.top, 4)
             }.frame(maxWidth: 860).padding(32).frame(maxWidth: .infinity, alignment: .leading)
         }.task { await DeepSeekCredentials.restoreRememberedKey(); keyExists = DeepSeekCredentials.hasSessionKey }
     }
