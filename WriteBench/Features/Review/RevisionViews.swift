@@ -133,6 +133,15 @@ struct RevisionComparisonCard: View {
                         change("主要问题", Double(previous.corrections.filter { $0.severity == .major }.count), Double(current.corrections.filter { $0.severity == .major }.count), lowerIsBetter: true, integer: true)
                     }
                 }
+                if let current, let previous, !current.segmentScores.isEmpty, !previous.segmentScores.isEmpty {
+                    HStack(spacing: 12) {
+                        ForEach(current.segmentScores, id: \.segment.number) { item in
+                            if let old = previous.segmentScores.first(where: { $0.segment.number == item.segment.number }) {
+                                change("(\(item.segment.number))", old.segment.score, item.segment.score)
+                            }
+                        }
+                    }
+                }
                 let diff = RevisionDiff.compare(baseline.originalEssay, session.originalEssay)
                 DisclosureGroup(isExpanded: $showDiff) {
                     Text(diff.text).font(.system(size: 14)).lineSpacing(6).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 12)

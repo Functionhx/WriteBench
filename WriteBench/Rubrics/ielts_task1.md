@@ -1,5 +1,5 @@
 # IELTS Academic Writing — Task 1
-Version: 2026.09-v1
+Version: 2026.10-v1
 Scale: single-task band estimate 0–9, half-band estimates. Minimum 150 words, suggested 20 minutes. This is a practice estimate; never label it an overall IELTS Writing band.
 Assess four equally weighted criteria: task achievement; coherence/cohesion; lexical resource; grammatical range/accuracy. Form the single-task score from these four assessments, rounded to the nearest 0.5. The app's language/register diagnostics are separate summaries, not the official criterion names.
 Task achievement: accurate key features, an overview and relevant comparisons; no invented trends or numbers. For incomplete chart descriptions in the prompt, explicitly state limits. Coherence: logical grouping, progression, purposeful links. Lexical resource: range, precision, appropriate collocations. Grammar: range and control, effect of errors on meaning. Register should be neutral or academic.

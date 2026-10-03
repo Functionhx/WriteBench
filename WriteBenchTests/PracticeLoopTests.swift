@@ -286,3 +286,48 @@ private actor RecordingGrader: EssayGradingService {
     #expect(view.caretFrame() == nil)
     #expect(WritingTask.kaoyan2Small.answerSheet?.number == "47." && WritingTask.kaoyanTranslation.answerSheet?.number == "46–50" && WritingTask.cet6Writing.answerSheet == nil)
 }
+
+// MARK: Per-sentence translation scores
+
+private func segments(_ scores: [Double]) -> [SegmentScore] {
+    zip(46..., scores).map { SegmentScore(number: String($0.0), score: $0.1, maxScore: 2, comment: "第 \($0.0) 句",
+        points: [ScoringPoint(source: "main clause", earned: min($0.1, 1), max: 1, note: ""), ScoringPoint(source: "modifier", earned: max(0, $0.1 - 1), max: 1, note: "")]) }
+}
+@Test func englishOneTranslationTotalsFollowTheSentenceMarks() {
+    var response = judgeResponse(6, corrections: [])
+    response.segments = segments([2, 1.5, 1, 2, 1])
+    ScoreAggregator.reconcileSegments(&response, task: .kaoyanTranslation)
+    #expect(response.score == 7.5)
+    response.score = 7
+    ScoreAggregator.reconcileSegments(&response, task: .kaoyanTranslation)
+    #expect(response.score == 7) // A 0.5 typo deduction is allowed.
+    response.segments.append(SegmentScore(number: "51", score: 3, maxScore: 2, comment: "out of range"))
+    ScoreAggregator.reconcileSegments(&response, task: .kaoyanTranslation)
+    #expect(response.segments.count == 5)
+    ScoreAggregator.reconcileSegments(&response, task: .kaoyan2Translation)
+    #expect(response.segments.isEmpty)
+}
+@Test func sentenceMarksComeFromTheMedianReviewer() throws {
+    let marks = [[2, 2, 1.5, 2, 1.5], [1.5, 1, 1, 1.5, 1], [2, 1.5, 1.5, 1.5, 1]]
+    let reviewers = zip(Judge.allCases, marks).map { judge, marks -> ReviewerResult in
+        var response = judgeResponse(marks.reduce(0, +)); response.segments = segments(marks)
+        return ReviewerResult(judge: judge, response: response, model: "test", timestamp: Date())
+    }
+    let report = try ScoreAggregator.aggregate(reviewers, task: .kaoyanTranslation, isDemo: false)
+    #expect(report.finalScore == 7.5 && report.medianReviewer?.judge == .c)
+    #expect(report.segmentScores.map(\.segment.score) == [2, 1.5, 1.5, 1.5, 1])
+    #expect(report.segmentScores[1].byJudge.map(\.score) == [2, 1, 1.5])
+    var json = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(judgeResponse())) as? [String: Any])
+    json.removeValue(forKey: "segments")
+    #expect(try JSONDecoder().decode(JudgeResponse.self, from: JSONSerialization.data(withJSONObject: json)).segments.isEmpty)
+}
+@Test func promptsAndSchemaAskForSentenceMarksOnlyForEnglishOneTranslation() throws {
+    let question = "Translate the underlined segments. (46) <u>We don't have to learn it.</u> It is innate. (47) <u>It never leaves us.</u>"
+    #expect(QuestionText.underlinedSegments(question) == ["46": "We don't have to learn it.", "47": "It never leaves us."])
+    let translation = GraderPrompt.system(judge: .a, input: GradingInput(task: .kaoyanTranslation, question: question, essay: "x", rubric: try RubricLoader.load(.kaoyanTranslation)))
+    #expect(translation.contains("segments is REQUIRED") && translation.contains("踩点给分"))
+    let essay = GraderPrompt.system(judge: .a, input: GradingInput(task: .kaoyanSmall, question: "Q", essay: "x", rubric: "r"))
+    #expect(essay.contains("segments must be an empty array"))
+    let schema = try #require(JSONSerialization.jsonObject(with: JudgeResponseSchema.data()) as? [String: Any])
+    #expect((schema["required"] as? [String])?.contains("segments") == true)
+}

@@ -1,5 +1,5 @@
 # 考研英语二 · 英译汉段落翻译练习
-Version: 2026.09-v1. App-owned practice rubric, not an official examiner manual.
+Version: 2026.10-v1. App-owned practice rubric, not an official examiner manual.
 
 Use a 0–15 practice scale for a complete English-to-Chinese passage translation. Judge the whole passage; do not apply English I's five-sentence, 2-point-per-sentence scheme. For a custom short fragment, state the limited practice scope rather than representing it as a complete official exam task.
 

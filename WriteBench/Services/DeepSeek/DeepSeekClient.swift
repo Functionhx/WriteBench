@@ -68,6 +68,7 @@ struct DeepSeekClient: StreamingEssayGradingService {
         do { result = try JudgeResponse.decodeProviderOutput(Data(content.utf8)) }
         catch { throw GradingError.invalidResponse("JSON 字段缺失或类型不符") }
         result.corrections = CorrectionMatcher.anchored(result.corrections, in: input.essay)
+        ScoreAggregator.reconcileSegments(&result, task: input.task)
         try ScoreAggregator.validate(result, task: input.task)
         return ReviewerResult(judge: judge, response: result, model: model, timestamp: Date(), provider: .deepSeek, reasoningEffort: "max", usage: usage)
     }
@@ -131,7 +132,9 @@ extension GraderPrompt {
          "majorErrors": ["scoring-relevant issue"], "minorErrors": ["smaller issue"],
          "corrections": [{"original": "EXACT nonempty substring from the student essay", "corrected": "replacement text in the target language", "category": "Grammar", "severity": "major", "explanation": "reason"}],
          "improvedVersion": "a complete improved answer in the target language",
-         "expressions": [{"phrase": "reusable expression in the target language", "meaning": "简体中文释义", "example": "one sentence using it in this topic"}]}
+         "expressions": [{"phrase": "reusable expression in the target language", "meaning": "简体中文释义", "example": "one sentence using it in this topic"}],
+         "segments": [{"number": "46", "score": 1.5, "maxScore": 2, "comment": "简体中文：这一句得分与失分的原因", "points": [{"source": "the English meaning group", "earned": 0.5, "max": 0.5, "note": "简体中文：译对了什么或错在哪里"}]}]}
+        \(input.task == .kaoyanTranslation ? "segments is REQUIRED: one entry per numbered underlined segment, in order, numbered as in the question (e.g. 46–50). Split each segment into its 3–4 meaning groups as points whose max values sum to exactly maxScore (2). score uses 0.5 steps. The overall score must equal the sum of segment scores, minus 0.5 only when the whole answer has three or more typos." : "segments must be an empty array for this task.")
         Valid categories are: \(MistakeCategory.allCases.map(\.rawValue).joined(separator: ", ")). Severity must be major or minor. Arrays can be empty. expressions lists 0–5 reusable, exam-appropriate expressions worth memorizing from your improvedVersion; prefer collocations and sentence frames over single common words, and never list phrases the student already used correctly. Prioritize up to 12 exam-relevant corrections. Avoid nitpicking acceptable usage. Missing task content belongs in majorErrors, not an invented original correction span. Each original MUST be an exact substring of the supplied essay. Do not penalize suspected OCR errors without evidence; input has been user-confirmed. Return a complete JSON object, without markdown fences.
         """
     }

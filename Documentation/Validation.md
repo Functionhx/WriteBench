@@ -1,3 +1,8 @@
+# 1.7.0 validation · 2026-10-02
+
+- 69 Swift tests pass. New coverage: English I translation totals reconcile to the sum of segment marks (allowing a single 0.5 typo deduction), out-of-range segments are dropped, segments are cleared for other tasks; per-sentence marks come from the median reviewer with every judge's mark; legacy reports without segments decode; prompts require segments only for English I translation and the Codex schema includes them; numbered underlined segments are extracted from the question.
+- The review page was rendered offscreen with a synthetic three-judge English I translation report to check the per-sentence card. The rubric follows the published syllabus rules (0.5 cap for distorted meaning, multiple renderings, cumulative typo deduction) and the 采分点 practice of 3–4 meaning groups per sentence. No paid live grading was run.
+
 # 1.6.2 validation · 2026-10-02
 
 - 66 Swift tests pass. New coverage: the custom caret replaces the system indicator, stays within one text line on Latin and blank lines, moves with the selection and hides for a range selection; answer-sheet numbering for the six kaoyan tasks.

@@ -70,7 +70,10 @@ struct ReviewView: View {
                 baseline = RevisionBaseline.find(for: session, among: candidates)
             }
     }
-    private var sections: [ReviewSection] { ReviewSection.allCases.filter { $0 != .progress || baseline != nil } }
+    private var sections: [ReviewSection] {
+        let hasSegments = !(session.report?.segmentScores.isEmpty ?? true)
+        return ReviewSection.allCases.filter { ($0 != .progress || baseline != nil) && ($0 != .segments || hasSegments) }
+    }
     private var reportContent: some View {
         VStack(alignment: .leading, spacing: 22) {
             if let report = session.report {
@@ -79,6 +82,7 @@ struct ReviewView: View {
                 }
                 scoreCard(report).reviewAnchor(.overview)
                 if let baseline { RevisionComparisonCard(session: session, baseline: baseline.session, baselineNumber: baseline.label).reviewAnchor(.progress) }
+                if !report.segmentScores.isEmpty { segmentCard(report).reviewAnchor(.segments) }
                 Card {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("评阅结论").font(.system(size: 18, weight: .semibold))
@@ -192,7 +196,7 @@ struct ReviewView: View {
         Card(padding: 28) {
             HStack(alignment: .center, spacing: 28) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("\(report.isDemo ? "DEMO " : "")WRITING SCORE").font(.system(size: 11, weight: .semibold)).tracking(1.6).foregroundStyle(WB.secondary)
+                    Text("\(report.isDemo ? "DEMO " : "")\(session.task.isTranslation ? "TRANSLATION" : "WRITING") SCORE").font(.system(size: 11, weight: .semibold)).tracking(1.6).foregroundStyle(WB.secondary)
                     HStack(alignment: .firstTextBaseline, spacing: 8) {
                         Text(report.finalScore.scoreText).font(.system(size: 62, weight: .semibold, design: .rounded)).foregroundStyle(WB.blue)
                         Text("/ \(Int(session.task.maxScore))").font(.system(size: 24)).foregroundStyle(WB.secondary)
@@ -209,6 +213,47 @@ struct ReviewView: View {
                     }
                     if report.confidence == .low { Text("Reviewer disagreement · inspect each review").font(.system(size: 11)).foregroundStyle(WB.amber) }
                 }
+            }
+        }
+    }
+    private func segmentCard(_ report: GradingReport) -> some View {
+        let sources = QuestionText.underlinedSegments(session.question)
+        return Card {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text("逐句得分").font(.system(size: 18, weight: .semibold))
+                    Spacer()
+                    Text("踩点给分 · 每句 2 分").font(.system(size: 11)).foregroundStyle(WB.secondary)
+                }
+                ForEach(report.segmentScores, id: \.segment.number) { item in
+                    let segment = item.segment
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(alignment: .firstTextBaseline, spacing: 10) {
+                            Text("(\(segment.number))").font(.system(size: 14, weight: .semibold))
+                            Text("\(segment.score.scoreText) / \(segment.maxScore.scoreText)").font(.system(size: 20, weight: .semibold, design: .rounded))
+                                .foregroundStyle(segment.score >= segment.maxScore ? WB.green : segment.score <= segment.maxScore / 4 ? WB.amber : WB.blue)
+                            Spacer()
+                            Text(item.byJudge.map { "\($0.judge.rawValue.uppercased()) \($0.score.scoreText)" }.joined(separator: " · "))
+                                .font(.system(size: 11)).monospacedDigit().foregroundStyle(WB.secondary).help("三位评审对这一句的给分")
+                        }
+                        if let source = sources[segment.number] { Text(source).font(.system(size: 13)).foregroundStyle(WB.secondary).lineSpacing(4).textSelection(.enabled) }
+                        if !segment.comment.isEmpty { Text(segment.comment).font(.system(size: 14)).lineSpacing(4).textSelection(.enabled) }
+                        ForEach(Array(segment.points.enumerated()), id: \.offset) { _, point in
+                            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                                Image(systemName: point.earned >= point.max ? "checkmark.circle.fill" : point.earned > 0 ? "circle.lefthalf.filled" : "xmark.circle")
+                                    .foregroundStyle(point.earned >= point.max ? WB.green : point.earned > 0 ? WB.blue : WB.amber)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(point.source).font(.system(size: 13, weight: .medium))
+                                    if !point.note.isEmpty { Text(point.note).font(.system(size: 12)).foregroundStyle(WB.secondary) }
+                                }.textSelection(.enabled)
+                                Spacer()
+                                Text("\(point.earned.scoreText) / \(point.max.scoreText)").font(.system(size: 12)).monospacedDigit().foregroundStyle(WB.secondary)
+                            }
+                        }
+                    }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(WB.canvas, in: RoundedRectangle(cornerRadius: 12))
+                }
+                Text("逐句分与采分点来自总分居中的那位评审，各句之和即总分；错别字整题累计满 3 个扣 0.5 分。右侧为三位评审各自的给分。")
+                    .font(.system(size: 11)).foregroundStyle(WB.secondary).lineSpacing(3)
             }
         }
     }
