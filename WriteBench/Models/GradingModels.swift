@@ -25,6 +25,31 @@ struct ExpressionSuggestion: Codable, Hashable, Sendable {
     var meaning: String
     var example: String
 }
+/// One 采分点 (meaning group) inside a numbered translation segment.
+struct ScoringPoint: Codable, Hashable, Sendable {
+    var source: String
+    var earned: Double
+    var max: Double
+    var note: String
+}
+/// Per-segment marks for English I translation, where each numbered underlined sentence is scored on its own.
+struct SegmentScore: Codable, Hashable, Sendable {
+    var number: String
+    var score: Double
+    var maxScore: Double
+    var comment: String
+    var points: [ScoringPoint] = []
+    private enum CodingKeys: String, CodingKey { case number, score, maxScore, comment, points }
+    init(number: String, score: Double, maxScore: Double, comment: String, points: [ScoringPoint] = []) {
+        self.number = number; self.score = score; self.maxScore = maxScore; self.comment = comment; self.points = points
+    }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        number = try c.decode(String.self, forKey: .number); score = try c.decode(Double.self, forKey: .score)
+        maxScore = try c.decode(Double.self, forKey: .maxScore); comment = try c.decode(String.self, forKey: .comment)
+        points = try c.decodeIfPresent([ScoringPoint].self, forKey: .points) ?? []
+    }
+}
 struct JudgeResponse: Codable, Sendable {
     var score: Double
     // Diagnostic dimensions use a common 0–10 scale; overall score uses the exam scale.
@@ -41,8 +66,9 @@ struct JudgeResponse: Codable, Sendable {
     var weaknesses: [String] = []
     var improvements: [String] = []
     var expressions: [ExpressionSuggestion] = []
+    var segments: [SegmentScore] = []
     private enum CodingKeys: String, CodingKey {
-        case score, taskCompletion, language, coherence, register, majorErrors, minorErrors, summary, corrections, improvedVersion, strengths, weaknesses, improvements, expressions
+        case score, taskCompletion, language, coherence, register, majorErrors, minorErrors, summary, corrections, improvedVersion, strengths, weaknesses, improvements, expressions, segments
     }
 }
 extension JudgeResponse {
@@ -70,6 +96,7 @@ extension JudgeResponse {
         weaknesses = try c.decodeIfPresent([String].self, forKey: .weaknesses) ?? []
         improvements = try c.decodeIfPresent([String].self, forKey: .improvements) ?? []
         expressions = try c.decodeIfPresent([ExpressionSuggestion].self, forKey: .expressions) ?? []
+        segments = try c.decodeIfPresent([SegmentScore].self, forKey: .segments) ?? []
     }
 }
 struct TokenUsage: Codable, Hashable, Sendable {
@@ -125,6 +152,15 @@ struct GradingReport: Codable, Sendable {
         return reviewers.flatMap(\.response.corrections).filter {
             seen.insert("\($0.category.rawValue)|\($0.original.lowercased().trimmingCharacters(in: .whitespacesAndNewlines))").inserted
         }.sorted { $0.severity == .major && $1.severity != .major }
+    }
+    /// The reviewer whose overall score is the median: its per-segment marks add up to the reported total.
+    var medianReviewer: ReviewerResult? { reviewers.min { abs($0.response.score - finalScore) < abs($1.response.score - finalScore) } }
+    /// Per-sentence marks from the median reviewer, with every reviewer's mark for the same sentence.
+    var segmentScores: [(segment: SegmentScore, byJudge: [(judge: Judge, score: Double)])] {
+        guard let source = medianReviewer, !source.response.segments.isEmpty else { return [] }
+        return source.response.segments.map { segment in
+            (segment, reviewers.compactMap { reviewer in reviewer.response.segments.first { $0.number == segment.number }.map { (reviewer.judge, $0.score) } })
+        }
     }
     private var revisionSource: ReviewerResult? { reviewers.first(where: { $0.judge == .b }) ?? reviewers.first }
     var improvedVersion: String { revisionSource?.response.improvedVersion ?? "" }

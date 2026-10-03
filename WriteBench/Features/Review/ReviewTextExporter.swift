@@ -13,6 +13,12 @@ import Foundation
             feedback("下一稿怎么改", report.improvements),
             "评分维度（诊断分 / 10）\n\(session.task.isTranslation ? "译义与完整性" : "任务完成度")：\(report.dimension(\.taskCompletion).scoreText)\n语言：\(report.dimension(\.language).scoreText)\n连贯性：\(report.dimension(\.coherence).scoreText)\n语域：\(report.dimension(\.register).scoreText)"
         ]
+        if !report.segmentScores.isEmpty {
+            sections.append("逐句得分（中位分评审）\n" + report.segmentScores.map { item in
+                (["(\(item.segment.number)) \(item.segment.score.scoreText) / \(item.segment.maxScore.scoreText)　\(item.segment.comment)"]
+                 + item.segment.points.map { "  · \($0.source)：\($0.earned.scoreText) / \($0.max.scoreText)\($0.note.isEmpty ? "" : "，" + $0.note)" }).joined(separator: "\n")
+            }.joined(separator: "\n"))
+        }
         let reviewers = report.reviewers.map { result in
             var lines = ["\(result.judge.title) · \(result.judge.role) · \(result.response.score.scoreText) / \(Int(session.task.maxScore))",
                          "\(result.provider?.title ?? result.model) · \(result.model)", result.response.summary]

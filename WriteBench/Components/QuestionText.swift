@@ -9,6 +9,16 @@ enum QuestionText {
         text.replacingOccurrences(of: open, with: "").replacingOccurrences(of: close, with: "")
     }
 
+    /// Numbered underlined segments, e.g. "(46) <u>…</u>" → ["46": "…"].
+    static func underlinedSegments(_ text: String) -> [String: String] {
+        guard let regex = try? NSRegularExpression(pattern: #"\((\d+)\)\s*<u>(.*?)</u>"#, options: [.dotMatchesLineSeparators]) else { return [:] }
+        var result: [String: String] = [:]
+        for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)) {
+            if let number = Range(match.range(at: 1), in: text), let body = Range(match.range(at: 2), in: text) { result[String(text[number])] = String(text[body]) }
+        }
+        return result
+    }
+
     static func attributed(_ text: String) -> AttributedString {
         var result = AttributedString()
         var rest = Substring(text)

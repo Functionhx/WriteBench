@@ -45,6 +45,14 @@ enum ScoreAggregator {
         let confidence: Confidence = mode == .quick ? .single : spread <= 1 ? .high : spread <= 2 ? .medium : .low
         return GradingReport(reviewers: results.sorted { $0.judge.rawValue < $1.judge.rawValue }, finalScore: scores[scores.count / 2], spread: spread, confidence: confidence, rubricVersion: RubricLoader.version, promptVersion: GraderPrompt.version, isDemo: isDemo, timestamp: Date(), mode: mode)
     }
+    /// English I translation totals are the sum of the five segment marks, less at most 0.5 for typos.
+    static func reconcileSegments(_ response: inout JudgeResponse, task: WritingTask) {
+        guard task == .kaoyanTranslation else { response.segments = []; return }
+        response.segments = response.segments.filter { $0.maxScore > 0 && $0.score.isFinite && (0...$0.maxScore).contains($0.score) }
+        guard !response.segments.isEmpty else { return }
+        let sum = response.segments.reduce(0) { $0 + $1.score }
+        if !(sum - 0.5...sum).contains(response.score) { response.score = min(task.maxScore, sum) }
+    }
     static func validate(_ response: JudgeResponse, task: WritingTask) throws {
         guard response.score.isFinite, (0...task.maxScore).contains(response.score) else { throw GradingError.invalidResponse("分数超出题型范围") }
         let values = [response.taskCompletion, response.language, response.coherence, response.register]
@@ -98,10 +106,10 @@ struct GradingCoordinator: Sendable {
 }
 
 enum RubricLoader {
-    static let version = "2026.09-v1"
+    static let version = "2026.10-v1"
     static func load(_ task: WritingTask) throws -> String {
         guard let url = Bundle.main.url(forResource: task.rubricFile, withExtension: "md") else { throw GradingError.missingRubric }
         return try String(contentsOf: url, encoding: .utf8)
     }
 }
-enum GraderPrompt { static let version = "1.3.2" }
+enum GraderPrompt { static let version = "1.4.0" }

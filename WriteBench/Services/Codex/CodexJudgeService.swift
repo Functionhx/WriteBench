@@ -80,6 +80,7 @@ struct CodexJudgeService: EssayGradingService {
         let url = directory.appendingPathComponent("response.json")
         guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size < 1_000_000, let data = try? Data(contentsOf: url), var response = try? JudgeResponse.decodeProviderOutput(data) else { throw CodexError.malformed }
         response.corrections = CorrectionMatcher.anchored(response.corrections, in: input.essay)
+        ScoreAggregator.reconcileSegments(&response, task: input.task)
         try ScoreAggregator.validate(response, task: input.task)
         return ReviewerResult(judge: judge, response: response, model: model.isEmpty ? "Codex automatic" : model, timestamp: Date(), provider: .codex, reasoningEffort: reasoning,
                               usage: CodexUsage.parse(result.stdout))
@@ -111,10 +112,15 @@ enum JudgeResponseSchema {
                            "severity": ["type": "string", "enum": ["major", "minor"]]]]
         let expression: [String: Any] = ["type": "object", "additionalProperties": false, "required": ["example", "meaning", "phrase"],
             "properties": ["phrase": string, "meaning": string, "example": string]]
+        let point: [String: Any] = ["type": "object", "additionalProperties": false, "required": ["earned", "max", "note", "source"],
+            "properties": ["source": string, "earned": number, "max": number, "note": string]]
+        let segment: [String: Any] = ["type": "object", "additionalProperties": false, "required": ["comment", "maxScore", "number", "points", "score"],
+            "properties": ["number": string, "score": number, "maxScore": number, "comment": string, "points": ["type": "array", "items": point]]]
         let properties: [String: Any] = ["score": number, "taskCompletion": number, "language": number, "coherence": number, "register": number,
             "majorErrors": strings, "minorErrors": strings, "summary": string, "strengths": strings, "weaknesses": strings, "improvements": strings,
             "corrections": ["type": "array", "items": correction], "improvedVersion": string,
-            "expressions": ["type": "array", "items": expression]]
+            "expressions": ["type": "array", "items": expression],
+            "segments": ["type": "array", "items": segment]]
         return try JSONSerialization.data(withJSONObject: ["type": "object", "additionalProperties": false, "required": properties.keys.sorted(), "properties": properties], options: [.prettyPrinted, .sortedKeys])
     }
 }
