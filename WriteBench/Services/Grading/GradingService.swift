@@ -104,4 +104,4 @@ enum RubricLoader {
         return try String(contentsOf: url, encoding: .utf8)
     }
 }
-enum GraderPrompt { static let version = "1.3.0" }
+enum GraderPrompt { static let version = "1.3.1" }

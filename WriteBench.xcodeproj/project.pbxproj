@@ -55,6 +55,7 @@
 		CB760C24CAE63253B9400E19 /* WriteBenchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 679F1D25813DBB4821B089EF /* WriteBenchTests.swift */; };
 		CCB636BAB11DE1B7DE6C1CA2 /* ImmersiveWritingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B600C2CBBB1B477ABB65C42 /* ImmersiveWritingView.swift */; };
 		CF9CA154E89BD40306ABC7D2 /* EssayFolderMetadata.swift in Sources */ = {isa = PBXBuildFile; fileRef = 89F9C06884EE52989CB4491F /* EssayFolderMetadata.swift */; };
+		D03424B806D55BF2BB9F11DC /* kaoyan_english2_large.md in Resources */ = {isa = PBXBuildFile; fileRef = 0506352B36FD805B5E9053D8 /* kaoyan_english2_large.md */; };
 		D3F29CFA674B891722D5B739 /* cet6_writing.md in Resources */ = {isa = PBXBuildFile; fileRef = 650B4D62F506EDDC71D6396A /* cet6_writing.md */; };
 		D4A1396AF9FFF2FF6C40C24D /* kaoyan_english2_translation.md in Resources */ = {isa = PBXBuildFile; fileRef = 56792E2C1501DBCE7B80739B /* kaoyan_english2_translation.md */; };
 		DB3DEEA68D82D9F8BECF108E /* ReviewOutline.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7B9132C06548AC9B8B44070 /* ReviewOutline.swift */; };
@@ -63,6 +64,7 @@
 		DCC333A3FAF19BC2ECC79BA0 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 17802ADDF6589CB80F4B4F01 /* KeychainService.swift */; };
 		DEBA962949C4AADDFCB2C5D0 /* ielts_task1.md in Resources */ = {isa = PBXBuildFile; fileRef = 405A85F2A07E72B5AD277D96 /* ielts_task1.md */; };
 		DEF094BE47996A62C68AB985 /* CodexJudgeService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27300883AE5AE3DD46C36924 /* CodexJudgeService.swift */; };
+		E041B0138CF95145600B02C6 /* kaoyan_english2_small.md in Resources */ = {isa = PBXBuildFile; fileRef = 015B10F8076FB519F8FDAACD /* kaoyan_english2_small.md */; };
 		E0495C7F8744F99633CD2EF5 /* UsageCost.swift in Sources */ = {isa = PBXBuildFile; fileRef = E6B358A2E1043646F5A65FA4 /* UsageCost.swift */; };
 		E32387900468FFCA09760D27 /* kaoyan_english1_large.md in Resources */ = {isa = PBXBuildFile; fileRef = ACA34C8DE60D85ABFA45116F /* kaoyan_english1_large.md */; };
 		E7928726F27B1B2EB5341AEB /* EssaySession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A8874F23C092B83269A6E56 /* EssaySession.swift */; };
@@ -84,8 +86,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		015B10F8076FB519F8FDAACD /* kaoyan_english2_small.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = kaoyan_english2_small.md; sourceTree = "<group>"; };
 		018639A9F1452A7617A5A0A2 /* AppLifecycle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppLifecycle.swift; sourceTree = "<group>"; };
 		029A81F1C48B2FAE8914576B /* ReviewTextExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewTextExporter.swift; sourceTree = "<group>"; };
+		0506352B36FD805B5E9053D8 /* kaoyan_english2_large.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = kaoyan_english2_large.md; sourceTree = "<group>"; };
 		0A8874F23C092B83269A6E56 /* EssaySession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EssaySession.swift; sourceTree = "<group>"; };
 		0F9DB3748FBE72E213C6EB37 /* ReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewView.swift; sourceTree = "<group>"; };
 		100F5B726342F502CA8C4207 /* LocalProcessRunner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalProcessRunner.swift; sourceTree = "<group>"; };
@@ -287,6 +291,8 @@
 				ACA34C8DE60D85ABFA45116F /* kaoyan_english1_large.md */,
 				6A7B637179FC6E271F31DBF4 /* kaoyan_english1_small.md */,
 				AD3CEB6EC11C595CA1EA79D6 /* kaoyan_english1_translation.md */,
+				0506352B36FD805B5E9053D8 /* kaoyan_english2_large.md */,
+				015B10F8076FB519F8FDAACD /* kaoyan_english2_small.md */,
 				56792E2C1501DBCE7B80739B /* kaoyan_english2_translation.md */,
 			);
 			path = Rubrics;
@@ -508,6 +514,8 @@
 				E32387900468FFCA09760D27 /* kaoyan_english1_large.md in Resources */,
 				96EB80336D8E7D70E3839817 /* kaoyan_english1_small.md in Resources */,
 				4B7B1CDF7FADBE73B96E26DA /* kaoyan_english1_translation.md in Resources */,
+				D03424B806D55BF2BB9F11DC /* kaoyan_english2_large.md in Resources */,
+				E041B0138CF95145600B02C6 /* kaoyan_english2_small.md in Resources */,
 				D4A1396AF9FFF2FF6C40C24D /* kaoyan_english2_translation.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -647,7 +655,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -662,7 +670,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.5.0;
+				MARKETING_VERSION = 1.6.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -743,7 +751,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -764,7 +772,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.5.0;
+				MARKETING_VERSION = 1.6.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

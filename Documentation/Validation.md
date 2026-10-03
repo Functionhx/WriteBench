@@ -1,3 +1,9 @@
+# 1.6.0 validation · 2026-10-02
+
+- 63 Swift tests pass on Xcode 27.0. New coverage: English II small/large tasks (scales 10/15, 100/150 words, own rubrics loaded from the bundle), kaoyan task order, and the grader prompt carrying the 【配图说明】 transcription rule with the 0–15 scale.
+- An isolated QA copy restored a 68-question local package (2010–2026 English I/II small and large essays, 34 figures) through the existing backup restore: 17 per task, figures stored and shown in the library badge, preparation page and immersive view; English II large essay countdown is 30 minutes. The six kaoyan task tabs fit the preparation column. No user database was used.
+- Past-paper text and figures are not bundled in the app or repository; they were imported only into the user's local question bank.
+
 # 1.5.0 validation · 2026-10-02
 
 - 62 Swift tests pass on Xcode 27.0 / macOS 27.0.1. New coverage: correction anchoring across curly quotes, full-width punctuation, whitespace and case; invented spans dropped without failing the review; DeepSeek streamed usage (including cache hits and reasoning tokens) and Codex turn-completion usage; required `expressions` in the Codex schema; single-judge quick review routing, aggregation and persistence; legacy reports decoding as full reviews; one exam time-up signal per crossing; clearing an untouched submitted draft; word/character revision diffs; parent-then-earlier revision baselines; built-in bank uniqueness and practice index; review-card sync idempotence and the 1/2/4/8/16-day schedule; backup export/restore round trip with images, cards and drafts, and a second restore that adds nothing.

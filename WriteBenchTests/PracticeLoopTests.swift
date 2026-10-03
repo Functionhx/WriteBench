@@ -230,3 +230,15 @@ private actor RecordingGrader: EssayGradingService {
     #expect(again.added == 0 && again.skipped == 5)
     #expect(throws: (any Error).self) { try BackupService.restore(Data("{}".utf8), into: target) }
 }
+
+// MARK: English II writing
+
+@Test func englishTwoWritingTasksHaveTheirOwnScalesRubricsAndFigureRule() throws {
+    #expect(Exam.kaoyan.tasks == [.kaoyanSmall, .kaoyanLarge, .kaoyan2Small, .kaoyan2Large, .kaoyanTranslation, .kaoyan2Translation])
+    #expect(WritingTask.kaoyan2Small.maxScore == 10 && WritingTask.kaoyan2Large.maxScore == 15 && WritingTask.kaoyanLarge.maxScore == 20)
+    #expect(WritingTask.kaoyan2Large.targetWords == 150 && !WritingTask.kaoyan2Large.isTranslation)
+    for task in [WritingTask.kaoyan2Small, .kaoyan2Large] { #expect(try RubricLoader.load(task).contains("English II")) }
+    let input = GradingInput(task: .kaoyan2Large, question: "Write an essay based on the chart.\n【配图说明】看电视 90.8%", essay: "TV is popular.", rubric: try RubricLoader.load(.kaoyan2Large))
+    let prompt = GraderPrompt.system(judge: .a, input: input)
+    #expect(prompt.contains("【配图说明】") && prompt.contains("0–15.0"))
+}

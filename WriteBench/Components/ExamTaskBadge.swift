@@ -7,6 +7,10 @@ struct ExamTaskBadge: View {
         switch task {
         case .kaoyanSmall: "英语一 · 小作文"
         case .kaoyanLarge: "英语一 · 大作文"
+        case .kaoyan2Small: "英语二 · 小作文"
+        case .kaoyan2Large: "英语二 · 大作文"
+        case .kaoyanTranslation: "英语一 · 翻译"
+        case .kaoyan2Translation: "英语二 · 翻译"
         case .cet6Writing: "写作"
         case .ieltsTask1: "Task 1 · 小作文"
         case .ieltsTask2: "Task 2 · 大作文"
