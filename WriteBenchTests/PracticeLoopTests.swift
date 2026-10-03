@@ -268,3 +268,21 @@ private actor RecordingGrader: EssayGradingService {
     let steps = zip(tops.dropFirst(), tops).map { $0 - $1 }
     #expect(!steps.isEmpty && steps.allSatisfy { abs($0 - 36) < 0.5 })
 }
+@Test @MainActor func customCaretSitsOnTheTextLineWithoutCrossingTheRule() throws {
+    let view = RuledTextView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
+    view.layoutManager?.usesFontLeading = false
+    view.string = "Dear Alex,\n\nI am writing"
+    view.apply(.init(font: .sans, size: 18, ruled: true, sheetNumber: "47."))
+    #expect(view.insertionPointColor == .clear)
+    var frames: [NSRect] = []
+    for index in [0, 4, 12, (view.string as NSString).length] {
+        view.setSelectedRange(NSRange(location: index, length: 0))
+        frames.append(try #require(view.caretFrame()))
+    }
+    #expect(frames.allSatisfy { $0.height < 36 && $0.height > 15 && $0.width <= 2 })
+    #expect(frames[1].minX > frames[0].minX && abs(frames[1].minY - frames[0].minY) < 0.5)
+    #expect(abs(frames[2].minY - frames[0].minY - 72) < 0.5)
+    view.setSelectedRange(NSRange(location: 0, length: 4))
+    #expect(view.caretFrame() == nil)
+    #expect(WritingTask.kaoyan2Small.answerSheet?.number == "47." && WritingTask.kaoyanTranslation.answerSheet?.number == "46–50" && WritingTask.cet6Writing.answerSheet == nil)
+}

@@ -1,3 +1,8 @@
+# 1.6.2 validation · 2026-10-02
+
+- 66 Swift tests pass. New coverage: the custom caret replaces the system indicator, stays within one text line on Latin and blank lines, moves with the selection and hides for a range selection; answer-sheet numbering for the six kaoyan tasks.
+- The full answering page was rendered offscreen from the app sources for English II small essay and English I translation and compared with a published 英语（二）答题卡 2 writing page (section heading, black frame, dark rules, question number, corner marks).
+
 # 1.6.1 validation · 2026-10-02
 
 - 65 Swift tests pass. New coverage: `<u>` markup renders as an underline in place and strips to plain text; a malformed tag degrades to plain text; the ruled editor keeps natural line height with spacing after each line and an even 36 pt pitch at 18 pt for Latin, CJK and blank lines.
