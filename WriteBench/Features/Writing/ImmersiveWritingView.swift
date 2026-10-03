@@ -4,6 +4,9 @@ import SwiftUI
 struct ImmersiveWritingView: View {
     @AppStorage("showLiveWordCount") private var showLiveWordCount = false
     @AppStorage("examTimeLimit") private var examTimeLimit = false
+    @AppStorage("editorFont") private var editorFont = EditorFont.sans
+    @AppStorage("editorFontSize") private var editorFontSize = 18.0
+    @AppStorage("editorRuled") private var editorRuled = true
     @Bindable var store: WritingStore
     var isRecognizing: Bool
     var onSubmit: () -> Void
@@ -59,7 +62,7 @@ struct ImmersiveWritingView: View {
             Text("试题").font(.system(size: 12, weight: .medium)).foregroundStyle(WB.secondary)
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text(store.question).font(.system(size: 15)).lineSpacing(7).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(QuestionText.attributed(store.question)).font(.system(size: 15)).lineSpacing(7).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
                     if let data = store.questionImage, let image = NSImage(data: data) { Image(nsImage: image).resizable().scaledToFit().accessibilityLabel("题目原图") }
                 }
             }.scrollIndicators(.hidden)
@@ -72,7 +75,8 @@ struct ImmersiveWritingView: View {
                 Spacer()
                 if showLiveWordCount { Text(store.task.targetLanguage == "Simplified Chinese" ? "\(store.essay.count) 字符" : "\(store.words) words").font(.system(size: 12)).monospacedDigit().foregroundStyle(WB.secondary).accessibilityIdentifier("liveWordCount") }
             }
-            PlainTextEditor(text: $store.essay, fontSize: store.task.exam == .ielts ? 18 : 20, editable: true, identifier: "essayEditor", ruled: store.task.exam != .ielts, requestFocus: true)
+            PlainTextEditor(text: $store.essay, fontSize: editorFontSize, fontStyle: editorFont, editable: true, identifier: "essayEditor",
+                            ruled: editorRuled && store.task.exam != .ielts, requestFocus: true)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .overlay(Rectangle().stroke(Color.black.opacity(0.12), lineWidth: 0.75))
             HStack {

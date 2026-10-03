@@ -107,7 +107,7 @@ struct WritingView: View {
             if editingQuestion {
                 PlainTextEditor(text: $store.question, fontSize: 15, identifier: "questionEditor").frame(height: 230).background(WB.canvas, in: RoundedRectangle(cornerRadius: 8))
             } else {
-                Text(store.question).font(.system(size: 16)).lineSpacing(7).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
+                Text(QuestionText.attributed(store.question)).font(.system(size: 16)).lineSpacing(7).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
             }
             if let data = store.questionImage, let image = NSImage(data: data) {
                 DisclosureGroup("题目配图", isExpanded: $showQuestionImage) { Image(nsImage: image).resizable().scaledToFit().frame(maxHeight: 320).padding(.top, 8) }.font(.system(size: 12)).foregroundStyle(WB.secondary)

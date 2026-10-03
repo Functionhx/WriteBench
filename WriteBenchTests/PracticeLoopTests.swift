@@ -242,3 +242,29 @@ private actor RecordingGrader: EssayGradingService {
     let prompt = GraderPrompt.system(judge: .a, input: input)
     #expect(prompt.contains("【配图说明】") && prompt.contains("0–15.0"))
 }
+
+// MARK: Question underline and editor
+
+@Test func underlineMarkupRendersInPlaceAndStripsForPlainText() {
+    let source = "Read and translate. (46) <u>We don't have to learn it.</u> It is innate. 【配图说明】图"
+    #expect(QuestionText.plain(source) == "Read and translate. (46) We don't have to learn it. It is innate. 【配图说明】图")
+    let attributed = QuestionText.attributed(source)
+    #expect(String(attributed.characters) == QuestionText.plain(source))
+    let underlined = attributed.runs.filter { $0.underlineStyle != nil }.map { String(attributed[$0.range].characters) }
+    #expect(underlined == ["We don't have to learn it."])
+    #expect(String(QuestionText.attributed("No markup <u>open").characters) == "No markup open")
+}
+@Test @MainActor func ruledEditorKeepsTextHeightLinesAndEvenPitch() throws {
+    let view = RuledTextView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
+    view.layoutManager?.usesFontLeading = false
+    view.string = "First line\n第二行\n\nFourth"
+    view.apply(.init(font: .serif, size: 18, ruled: true))
+    let manager = try #require(view.layoutManager), container = try #require(view.textContainer)
+    manager.ensureLayout(for: container)
+    let style = try #require(view.defaultParagraphStyle)
+    #expect(style.lineSpacing > 0 && style.maximumLineHeight < 36)
+    var tops: [CGFloat] = []
+    manager.enumerateLineFragments(forGlyphRange: NSRange(location: 0, length: manager.numberOfGlyphs)) { rect, _, _, _, _ in tops.append(rect.minY) }
+    let steps = zip(tops.dropFirst(), tops).map { $0 - $1 }
+    #expect(!steps.isEmpty && steps.allSatisfy { abs($0 - 36) < 0.5 })
+}

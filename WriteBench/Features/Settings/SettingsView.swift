@@ -6,6 +6,9 @@ struct SettingsView: View {
     var showsBackup = true
     @AppStorage("showLiveWordCount") private var showLiveWordCount = false
     @AppStorage("examTimeLimit") private var examTimeLimit = false
+    @AppStorage("editorFont") private var editorFont = EditorFont.sans
+    @AppStorage("editorFontSize") private var editorFontSize = 18.0
+    @AppStorage("editorRuled") private var editorRuled = true
     @AppStorage("autoSubmitAtLimit") private var autoSubmitAtLimit = false
     @AppStorage("quickJudge") private var quickJudge = Judge.b
     @AppStorage(UsageCost.inputKey) private var priceInput = 0.0
@@ -36,6 +39,17 @@ struct SettingsView: View {
                         Label("答题偏好", systemImage: "textformat.123").font(.system(size: 18, weight: .semibold)).labelStyle(BlueIconLabelStyle())
                         Toggle("答题时显示词数", isOn: $showLiveWordCount).toggleStyle(.switch).accessibilityIdentifier("showLiveWordCountSetting")
                         Text("默认关闭，交卷后再显示本次词数。开启后，所有考试的答题页显示实时计数；中文译文显示字符数。").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                        Divider().padding(.vertical, 4)
+                        HStack(spacing: 14) {
+                            Text("答题字体").font(.system(size: 13)).frame(width: 70, alignment: .leading)
+                            Picker("答题字体", selection: $editorFont) { ForEach(EditorFont.allCases) { Text($0.title).tag($0) } }.labelsHidden().frame(width: 220)
+                            Text("字号").font(.system(size: 13))
+                            Stepper(value: $editorFontSize, in: 15...24, step: 1) { Text("\(Int(editorFontSize)) pt").font(.system(size: 13)).monospacedDigit() }.fixedSize()
+                        }
+                        Toggle("考研、六级答题区显示横线", isOn: $editorRuled).toggleStyle(.switch)
+                        PlainTextEditor(text: .constant("In my view, reading widely is the surest way to write well.\n我认为，广泛阅读是写好文章最可靠的途径。"), fontSize: editorFontSize, fontStyle: editorFont, editable: false, identifier: "editorPreview", ruled: editorRuled)
+                            .frame(height: editorFontSize * (editorRuled ? 4 : 3.2) + 40).background(.white, in: RoundedRectangle(cornerRadius: 8)).overlay(RoundedRectangle(cornerRadius: 8).stroke(WB.line))
+                            .accessibilityLabel("答题区预览")
                         Divider().padding(.vertical, 4)
                         Toggle("考试限时（倒计时）", isOn: $examTimeLimit).toggleStyle(.switch).accessibilityIdentifier("examTimeLimitSetting")
                         Toggle("到点自动交卷（三位评审）", isOn: $autoSubmitAtLimit).toggleStyle(.checkbox).disabled(!examTimeLimit).padding(.leading, 2)

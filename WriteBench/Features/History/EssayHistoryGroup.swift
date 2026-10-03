@@ -17,7 +17,7 @@ import CryptoKit
     let versions: [EssaySession]
     var first: EssaySession { versions[0] }
     var latest: EssaySession { versions[versions.count - 1] }
-    var questionTitle: String { first.question.split(whereSeparator: \.isNewline).joined(separator: " ") }
+    var questionTitle: String { QuestionText.plain(first.question).split(whereSeparator: \.isNewline).joined(separator: " ") }
 
     private init(key: Key, versions: [EssaySession]) {
         id = key

@@ -162,7 +162,7 @@ struct ReviewView: View {
                 Card {
                     DisclosureGroup("Original question & essay") {
                         VStack(alignment: .leading, spacing: 20) {
-                            Text(session.question).foregroundStyle(WB.secondary)
+                            Text(QuestionText.attributed(session.question)).foregroundStyle(WB.secondary)
                             if let data = session.questionImage, let image = NSImage(data: data) { Image(nsImage: image).resizable().scaledToFit().frame(maxHeight: 260) }
                             Text(session.originalEssay)
                             if let data = session.sourceImages, let pages = try? JSONDecoder().decode([Data].self, from: data) {
@@ -184,7 +184,7 @@ struct ReviewView: View {
                 Text("\(session.task.targetLanguage == "Simplified Chinese" ? "\(session.originalEssay.count) characters" : "\(session.wordCount) words") · \(Int(session.writingDuration / 60)) min · \(session.inputMode.capitalized) · \(session.date.formatted(date: .abbreviated, time: .shortened))\nRubric \(session.rubricVersion) · Prompt \(session.graderPromptVersion) · \(session.modelName)\(usageLine(report))").font(.system(size: 10)).foregroundStyle(WB.secondary).textSelection(.enabled)
             } else {
                 EmptyState(symbol: "exclamationmark.triangle", title: "Unable to read this review", detail: "The saved review data is invalid. Your original question and essay are preserved below.")
-                Card { VStack(alignment: .leading, spacing: 20) { Text(session.question).foregroundStyle(WB.secondary); Text(session.originalEssay) }.textSelection(.enabled) }
+                Card { VStack(alignment: .leading, spacing: 20) { Text(QuestionText.attributed(session.question)).foregroundStyle(WB.secondary); Text(session.originalEssay) }.textSelection(.enabled) }
             }
         }.padding(28)
     }
