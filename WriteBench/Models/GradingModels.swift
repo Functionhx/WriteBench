@@ -20,6 +20,11 @@ struct Correction: Codable, Hashable, Identifiable, Sendable {
     var explanation: String
     var id: String { "\(category.rawValue)|\(original)|\(corrected)" }
 }
+struct ExpressionSuggestion: Codable, Hashable, Sendable {
+    var phrase: String
+    var meaning: String
+    var example: String
+}
 struct JudgeResponse: Codable, Sendable {
     var score: Double
     // Diagnostic dimensions use a common 0–10 scale; overall score uses the exam scale.
@@ -35,8 +40,9 @@ struct JudgeResponse: Codable, Sendable {
     var strengths: [String] = []
     var weaknesses: [String] = []
     var improvements: [String] = []
+    var expressions: [ExpressionSuggestion] = []
     private enum CodingKeys: String, CodingKey {
-        case score, taskCompletion, language, coherence, register, majorErrors, minorErrors, summary, corrections, improvedVersion, strengths, weaknesses, improvements
+        case score, taskCompletion, language, coherence, register, majorErrors, minorErrors, summary, corrections, improvedVersion, strengths, weaknesses, improvements, expressions
     }
 }
 extension JudgeResponse {
@@ -63,6 +69,17 @@ extension JudgeResponse {
         strengths = try c.decodeIfPresent([String].self, forKey: .strengths) ?? []
         weaknesses = try c.decodeIfPresent([String].self, forKey: .weaknesses) ?? []
         improvements = try c.decodeIfPresent([String].self, forKey: .improvements) ?? []
+        expressions = try c.decodeIfPresent([ExpressionSuggestion].self, forKey: .expressions) ?? []
+    }
+}
+struct TokenUsage: Codable, Hashable, Sendable {
+    var input: Int
+    var cachedInput: Int
+    var output: Int
+    var reasoning: Int?
+    static func + (lhs: Self, rhs: Self) -> Self {
+        Self(input: lhs.input + rhs.input, cachedInput: lhs.cachedInput + rhs.cachedInput, output: lhs.output + rhs.output,
+             reasoning: lhs.reasoning.map { $0 + (rhs.reasoning ?? 0) } ?? rhs.reasoning)
     }
 }
 struct ReviewerResult: Codable, Identifiable, Sendable {
@@ -72,11 +89,19 @@ struct ReviewerResult: Codable, Identifiable, Sendable {
     var timestamp: Date
     var provider: GradingProvider? = nil
     var reasoningEffort: String? = nil
+    var usage: TokenUsage? = nil
+    /// Seconds from request to validated result.
+    var duration: Double? = nil
     var id: String { judge.id }
 }
 enum Confidence: String, Codable, Sendable {
-    case high = "High", medium = "Medium", low = "Low"
-    var title: String { "\(rawValue) confidence" }
+    case high = "High", medium = "Medium", low = "Low", single = "Single"
+    var title: String { self == .single ? "快速单评" : "\(rawValue) confidence" }
+    static func label(_ raw: String) -> String { raw == Confidence.single.rawValue ? "单评" : raw }
+}
+/// Full review is the three-judge median. Quick review asks one judge, for drafts.
+enum GradingMode: String, Codable, Sendable {
+    case full, quick
 }
 struct GradingReport: Codable, Sendable {
     var reviewers: [ReviewerResult]
@@ -87,13 +112,29 @@ struct GradingReport: Codable, Sendable {
     var promptVersion: String
     var isDemo: Bool
     var timestamp: Date
+    /// nil for reports saved before quick review existed; those are full reviews.
+    var mode: GradingMode? = nil
+    var duration: Double? = nil
+    var gradingMode: GradingMode { mode ?? .full }
+    var usage: TokenUsage? {
+        let values = reviewers.compactMap(\.usage)
+        return values.isEmpty ? nil : values.dropFirst().reduce(values[0], +)
+    }
     var corrections: [Correction] {
         var seen = Set<String>()
         return reviewers.flatMap(\.response.corrections).filter {
             seen.insert("\($0.category.rawValue)|\($0.original.lowercased().trimmingCharacters(in: .whitespacesAndNewlines))").inserted
         }.sorted { $0.severity == .major && $1.severity != .major }
     }
-    var improvedVersion: String { reviewers.first(where: { $0.judge == .b })?.response.improvedVersion ?? "" }
+    private var revisionSource: ReviewerResult? { reviewers.first(where: { $0.judge == .b }) ?? reviewers.first }
+    var improvedVersion: String { revisionSource?.response.improvedVersion ?? "" }
+    /// Expressions come from the reviewer whose improved version is shown, so each one appears in context.
+    var expressions: [ExpressionSuggestion] {
+        var seen = Set<String>()
+        return (revisionSource?.response.expressions ?? []).filter {
+            !$0.phrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && seen.insert($0.phrase.lowercased()).inserted
+        }
+    }
     var conclusion: String { reviewers.min { abs($0.response.score - finalScore) < abs($1.response.score - finalScore) }?.response.summary ?? "" }
     var strengths: [String] { uniqueFeedback(reviewers.flatMap(\.response.strengths)) }
     var weaknesses: [String] { uniqueFeedback(reviewers.flatMap { $0.response.weaknesses.isEmpty ? $0.response.majorErrors : $0.response.weaknesses }) }

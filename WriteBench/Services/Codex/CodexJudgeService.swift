@@ -78,10 +78,25 @@ struct CodexJudgeService: EssayGradingService {
         let result = try await runner.run(ProcessRequest(executable: executable, arguments: arguments(directory: directory), directory: directory, input: Data(prompt.utf8), timeout: 600))
         guard result.status == 0 else { throw CodexError.from(result) }
         let url = directory.appendingPathComponent("response.json")
-        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size < 1_000_000, let data = try? Data(contentsOf: url), let response = try? JudgeResponse.decodeProviderOutput(data) else { throw CodexError.malformed }
+        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size < 1_000_000, let data = try? Data(contentsOf: url), var response = try? JudgeResponse.decodeProviderOutput(data) else { throw CodexError.malformed }
+        response.corrections = CorrectionMatcher.anchored(response.corrections, in: input.essay)
         try ScoreAggregator.validate(response, task: input.task)
-        guard response.corrections.allSatisfy({ input.essay.contains($0.original) }) else { throw GradingError.invalidResponse("Codex 修改建议引用了原文中不存在的文字") }
-        return ReviewerResult(judge: judge, response: response, model: model.isEmpty ? "Codex automatic" : model, timestamp: Date(), provider: .codex, reasoningEffort: reasoning)
+        return ReviewerResult(judge: judge, response: response, model: model.isEmpty ? "Codex automatic" : model, timestamp: Date(), provider: .codex, reasoningEffort: reasoning,
+                              usage: CodexUsage.parse(result.stdout))
+    }
+}
+/// `codex exec --json` reports token usage on its turn-completion event. Usage is informational; absence is not an error.
+enum CodexUsage {
+    static func parse(_ stdout: Data) -> TokenUsage? {
+        var found: TokenUsage?
+        for line in String(decoding: stdout, as: UTF8.self).split(whereSeparator: \.isNewline) {
+            guard line.contains("\"usage\""), let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
+                  let usage = (object["usage"] ?? (object["msg"] as? [String: Any])?["usage"]) as? [String: Any] else { continue }
+            func int(_ key: String) -> Int? { (usage[key] as? NSNumber)?.intValue }
+            guard let input = int("input_tokens"), let output = int("output_tokens") else { continue }
+            found = TokenUsage(input: input, cachedInput: int("cached_input_tokens") ?? 0, output: output, reasoning: int("reasoning_output_tokens"))
+        }
+        return found
     }
 }
 enum JudgeResponseSchema {
@@ -94,9 +109,12 @@ enum JudgeResponseSchema {
             "properties": ["original": string, "corrected": string, "explanation": string,
                            "category": ["type": "string", "enum": MistakeCategory.allCases.map(\.rawValue)],
                            "severity": ["type": "string", "enum": ["major", "minor"]]]]
+        let expression: [String: Any] = ["type": "object", "additionalProperties": false, "required": ["example", "meaning", "phrase"],
+            "properties": ["phrase": string, "meaning": string, "example": string]]
         let properties: [String: Any] = ["score": number, "taskCompletion": number, "language": number, "coherence": number, "register": number,
             "majorErrors": strings, "minorErrors": strings, "summary": string, "strengths": strings, "weaknesses": strings, "improvements": strings,
-            "corrections": ["type": "array", "items": correction], "improvedVersion": string]
+            "corrections": ["type": "array", "items": correction], "improvedVersion": string,
+            "expressions": ["type": "array", "items": expression]]
         return try JSONSerialization.data(withJSONObject: ["type": "object", "additionalProperties": false, "required": properties.keys.sorted(), "properties": properties], options: [.prettyPrinted, .sortedKeys])
     }
 }

@@ -3,6 +3,8 @@ import SwiftData
 
 struct ReviewView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
+    @State private var baseline: (session: EssaySession, label: String)?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Bindable var session: EssaySession
     var onRewrite: (EssaySession) -> Void
@@ -34,7 +36,7 @@ struct ReviewView: View {
             ScrollViewReader { proxy in
                 HStack(spacing: 0) {
                     if session.report != nil {
-                        ReviewOutline(selection: readingSection, isTranslation: session.task.isTranslation) { section in
+                        ReviewOutline(selection: readingSection, isTranslation: session.task.isTranslation, sections: sections) { section in
                             navigationTarget = section
                             withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) {
                                 readingSection = section
@@ -46,7 +48,7 @@ struct ReviewView: View {
                         .coordinateSpace(name: "reviewReadingArea")
                         .onPreferenceChange(ReviewSectionPositions.self) { positions in
                             guard !atEnd, navigationTarget == nil else { return }
-                            readingSection = ReviewSection.allCases.last { (positions[$0] ?? .infinity) <= 32 } ?? .overview
+                            readingSection = sections.last { (positions[$0] ?? .infinity) <= 32 } ?? .overview
                         }
                         .onScrollGeometryChange(for: Bool.self) { geometry in
                             geometry.contentSize.height > geometry.containerSize.height &&
@@ -62,7 +64,13 @@ struct ReviewView: View {
             }
         }.frame(minWidth: 940, idealWidth: 1080, minHeight: 620, idealHeight: 840).background(WB.canvas).foregroundStyle(WB.ink)
             .onDisappear { copyFeedbackTask?.cancel() }
+            .task(id: session.id) {
+                let subtype = session.subtype
+                let candidates = (try? context.fetch(FetchDescriptor<EssaySession>(predicate: #Predicate { $0.subtype == subtype }))) ?? []
+                baseline = RevisionBaseline.find(for: session, among: candidates)
+            }
     }
+    private var sections: [ReviewSection] { ReviewSection.allCases.filter { $0 != .progress || baseline != nil } }
     private var reportContent: some View {
         VStack(alignment: .leading, spacing: 22) {
             if let report = session.report {
@@ -70,6 +78,7 @@ struct ReviewView: View {
                     Label("演示模式 · 示例分数，不代表真实写作水平，不计入统计。", systemImage: "info.circle").font(.system(size: 13)).foregroundStyle(WB.secondary).padding(15).frame(maxWidth: .infinity, alignment: .leading).background(WB.tint, in: RoundedRectangle(cornerRadius: 12))
                 }
                 scoreCard(report).reviewAnchor(.overview)
+                if let baseline { RevisionComparisonCard(session: session, baseline: baseline.session, baselineNumber: baseline.label).reviewAnchor(.progress) }
                 Card {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("评阅结论").font(.system(size: 18, weight: .semibold))
@@ -93,6 +102,11 @@ struct ReviewView: View {
                                 Text(reviewer.judge.role).font(.system(size: 11)).foregroundStyle(WB.secondary)
                                 Text(reviewer.provider?.title ?? reviewer.model).font(.system(size: 10)).foregroundStyle(WB.secondary)
                                 Text("\(reviewer.model) · \(reviewer.reasoningEffort?.uppercased() ?? "")").font(.system(size: 10)).foregroundStyle(WB.secondary).lineLimit(1).help(reviewer.model)
+                                if reviewer.usage != nil || reviewer.duration != nil {
+                                    Text([reviewer.duration.map { UsageCost.duration($0) }, reviewer.usage.map { "\(UsageCost.tokens($0.input + $0.output)) tokens" }].compactMap { $0 }.joined(separator: " · "))
+                                        .font(.system(size: 10)).foregroundStyle(WB.secondary).lineLimit(1)
+                                        .help(reviewer.usage.map(UsageCost.summary) ?? "")
+                                }
                             }
                         }
                     }
@@ -123,6 +137,7 @@ struct ReviewView: View {
                 Card {
                     VStack(alignment: .leading, spacing: 18) {
                         HStack { Text("Sentence corrections").font(.system(size: 18, weight: .semibold)); Spacer(); Text("\(report.corrections.count) suggestions").font(.system(size: 12)).foregroundStyle(WB.secondary) }
+                        if !report.corrections.isEmpty { AnnotatedEssayView(essay: session.originalEssay, corrections: report.corrections) }
                         if report.corrections.isEmpty { Text(report.isDemo ? "演示只包含少量本地示例规则。真实逐句修改请使用 DeepSeek 评分。" : "评审未标注逐句修改。请结合上方评语检查任务完成情况。").font(.system(size: 14)).foregroundStyle(WB.secondary) }
                         ForEach(report.corrections) { correction in CorrectionRow(correction: correction) }
                     }
@@ -132,6 +147,16 @@ struct ReviewView: View {
                         HStack { Text(session.task.isTranslation ? "参考改译" : "Improved version").font(.system(size: 18, weight: .semibold)); Spacer(); Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(session.correctedEssay, forType: .string) } label: { Label("Copy", systemImage: "doc.on.doc") }.buttonStyle(QuietButtonStyle()) }
                         Text(session.task.isTranslation ? "结合原文检查译义与表达，参考译文并非唯一正确答案。" : "Language reviewer’s suggested revision").font(.system(size: 12)).foregroundStyle(WB.secondary)
                         Text(session.correctedEssay).font(.system(size: 15)).lineSpacing(7).textSelection(.enabled)
+                        if !report.expressions.isEmpty {
+                            Divider().padding(.vertical, 4)
+                            HStack { Text("值得记住的表达").font(.system(size: 14, weight: .semibold)); Spacer(); Text("已加入复习 · 表达库").font(.system(size: 11)).foregroundStyle(WB.secondary) }
+                            ForEach(report.expressions, id: \.self) { expression in
+                                VStack(alignment: .leading, spacing: 3) {
+                                    HStack(alignment: .firstTextBaseline, spacing: 10) { Text(expression.phrase).font(.system(size: 14, weight: .medium)); Text(expression.meaning).font(.system(size: 12)).foregroundStyle(WB.secondary) }
+                                    if !expression.example.isEmpty { Text(expression.example).font(.system(size: 12)).italic().foregroundStyle(WB.secondary) }
+                                }.textSelection(.enabled)
+                            }
+                        }
                     }
                 }.reviewAnchor(.improved)
                 Card {
@@ -156,7 +181,7 @@ struct ReviewView: View {
                         HStack { Spacer(); Button(session.finalRewrite.isEmpty ? "开始重写" : "继续重写") { onRewrite(session) }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("startRewrite") }
                     }
                 }.reviewAnchor(.rewrite)
-                Text("\(session.task.targetLanguage == "Simplified Chinese" ? "\(session.originalEssay.count) characters" : "\(session.wordCount) words") · \(Int(session.writingDuration / 60)) min · \(session.inputMode.capitalized) · \(session.date.formatted(date: .abbreviated, time: .shortened))\nRubric \(session.rubricVersion) · Prompt \(session.graderPromptVersion) · \(session.modelName)").font(.system(size: 10)).foregroundStyle(WB.secondary).textSelection(.enabled)
+                Text("\(session.task.targetLanguage == "Simplified Chinese" ? "\(session.originalEssay.count) characters" : "\(session.wordCount) words") · \(Int(session.writingDuration / 60)) min · \(session.inputMode.capitalized) · \(session.date.formatted(date: .abbreviated, time: .shortened))\nRubric \(session.rubricVersion) · Prompt \(session.graderPromptVersion) · \(session.modelName)\(usageLine(report))").font(.system(size: 10)).foregroundStyle(WB.secondary).textSelection(.enabled)
             } else {
                 EmptyState(symbol: "exclamationmark.triangle", title: "Unable to read this review", detail: "The saved review data is invalid. Your original question and essay are preserved below.")
                 Card { VStack(alignment: .leading, spacing: 20) { Text(session.question).foregroundStyle(WB.secondary); Text(session.originalEssay) }.textSelection(.enabled) }
@@ -176,12 +201,27 @@ struct ReviewView: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 13) {
                     Label(report.confidence.title, systemImage: report.confidence == .low ? "exclamationmark.circle" : "checkmark.shield").font(.system(size: 14, weight: .medium)).foregroundStyle(report.confidence == .low ? WB.amber : WB.green).padding(.horizontal, 14).padding(.vertical, 9).background((report.confidence == .low ? WB.amber : WB.green).opacity(0.08), in: Capsule())
-                    Text("Median of 3 independent reviewers").font(.system(size: 12)).foregroundStyle(WB.secondary)
-                    Text("Reviewer spread: \(report.spread.scoreText)").font(.system(size: 11)).foregroundStyle(WB.secondary)
+                    if report.gradingMode == .quick {
+                        Text("一位评审 · 适合草稿，与三评分数对比时仅供参考").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                    } else {
+                        Text("Median of 3 independent reviewers").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                        Text("Reviewer spread: \(report.spread.scoreText)").font(.system(size: 11)).foregroundStyle(WB.secondary)
+                    }
                     if report.confidence == .low { Text("Reviewer disagreement · inspect each review").font(.system(size: 11)).foregroundStyle(WB.amber) }
                 }
             }
         }
+    }
+    private func usageLine(_ report: GradingReport) -> String {
+        var parts: [String] = []
+        if let duration = report.duration { parts.append("评阅用时 \(UsageCost.duration(duration))") }
+        for provider in GradingProvider.allCases {
+            let usages = report.reviewers.filter { $0.provider == provider }.compactMap(\.usage)
+            guard let first = usages.first else { continue }
+            parts.append("\(provider.title) \(UsageCost.summary(usages.dropFirst().reduce(first, +)))")
+        }
+        if let cost = UsageCost.cost(report) { parts.append("DeepSeek 约 \(UsageCost.yuan(cost))") }
+        return parts.isEmpty ? "" : "\n" + parts.joined(separator: " · ")
     }
     private func dimension(_ title: String, value: Double) -> some View {
         HStack(spacing: 20) {

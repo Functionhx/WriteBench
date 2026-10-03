@@ -51,7 +51,7 @@ struct DeepSeekClient: StreamingEssayGradingService {
             try await streaming.stream(for: request) { event in try await accumulator.consume(event, onPreview: onPreview) }
             try Task.checkCancellation()
             let finished = try await accumulator.completed()
-            return try decodedResult(finished.content, model: finished.model, input: input, judge: judge)
+            return try decodedResult(finished.content, model: finished.model, usage: finished.usage, input: input, judge: judge)
         }
         let (data, response) = try await transport.data(for: request)
         try Task.checkCancellation()
@@ -61,15 +61,15 @@ struct DeepSeekClient: StreamingEssayGradingService {
         do { completion = try JSONDecoder().decode(ChatCompletion.self, from: data) }
         catch { throw GradingError.invalidResponse("无法读取 API 响应") }
         guard let choice = completion.choices.first, choice.finish_reason == "stop", let content = choice.message.content, !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw GradingError.invalidResponse("评审输出为空或被截断") }
-        return try decodedResult(content, model: completion.model, input: input, judge: judge)
+        return try decodedResult(content, model: completion.model, usage: completion.usage?.tokenUsage, input: input, judge: judge)
     }
-    private func decodedResult(_ content: String, model: String, input: GradingInput, judge: Judge) throws -> ReviewerResult {
-        let result: JudgeResponse
+    private func decodedResult(_ content: String, model: String, usage: TokenUsage?, input: GradingInput, judge: Judge) throws -> ReviewerResult {
+        var result: JudgeResponse
         do { result = try JudgeResponse.decodeProviderOutput(Data(content.utf8)) }
         catch { throw GradingError.invalidResponse("JSON 字段缺失或类型不符") }
+        result.corrections = CorrectionMatcher.anchored(result.corrections, in: input.essay)
         try ScoreAggregator.validate(result, task: input.task)
-        guard result.corrections.allSatisfy({ input.essay.contains($0.original) }) else { throw GradingError.invalidResponse("修改建议引用了原文中不存在的文字") }
-        return ReviewerResult(judge: judge, response: result, model: model, timestamp: Date(), provider: .deepSeek, reasoningEffort: "max")
+        return ReviewerResult(judge: judge, response: result, model: model, timestamp: Date(), provider: .deepSeek, reasoningEffort: "max", usage: usage)
     }
     func testConnection() async throws -> [String] {
         var request = URLRequest(url: URL(string: "https://api.deepseek.com/models")!)
@@ -88,12 +88,22 @@ struct DeepSeekClient: StreamingEssayGradingService {
         let reasoning_effort = "max"
         let stream: Bool
         let thinking = Thinking(type: "enabled")
+        var stream_options: StreamOptions? { stream ? StreamOptions(include_usage: true) : nil }
         struct Format: Encodable { let type: String }
         struct Thinking: Encodable { let type: String }
+        struct StreamOptions: Encodable { let include_usage: Bool }
+        private enum CodingKeys: String, CodingKey { case model, messages, response_format, max_tokens, reasoning_effort, stream, thinking, stream_options }
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(model, forKey: .model); try c.encode(messages, forKey: .messages); try c.encode(response_format, forKey: .response_format)
+            try c.encode(max_tokens, forKey: .max_tokens); try c.encode(reasoning_effort, forKey: .reasoning_effort); try c.encode(stream, forKey: .stream)
+            try c.encode(thinking, forKey: .thinking); try c.encodeIfPresent(stream_options, forKey: .stream_options)
+        }
     }
     private struct ChatCompletion: Decodable {
         let model: String
         let choices: [Choice]
+        let usage: DeepSeekUsage?
         struct Choice: Decodable { let finish_reason: String?; let message: Content }
         struct Content: Decodable { let content: String? }
     }
@@ -120,8 +130,9 @@ extension GraderPrompt {
          "score": 0.0, "taskCompletion": 0.0, "language": 0.0, "coherence": 0.0, "register": 0.0,
          "majorErrors": ["scoring-relevant issue"], "minorErrors": ["smaller issue"],
          "corrections": [{"original": "EXACT nonempty substring from the student essay", "corrected": "replacement text in the target language", "category": "Grammar", "severity": "major", "explanation": "reason"}],
-         "improvedVersion": "a complete improved answer in the target language"}
-        Valid categories are: \(MistakeCategory.allCases.map(\.rawValue).joined(separator: ", ")). Severity must be major or minor. Arrays can be empty. Prioritize up to 12 exam-relevant corrections. Avoid nitpicking acceptable usage. Missing task content belongs in majorErrors, not an invented original correction span. Each original MUST be an exact substring of the supplied essay. Do not penalize suspected OCR errors without evidence; input has been user-confirmed. Return a complete JSON object, without markdown fences.
+         "improvedVersion": "a complete improved answer in the target language",
+         "expressions": [{"phrase": "reusable expression in the target language", "meaning": "简体中文释义", "example": "one sentence using it in this topic"}]}
+        Valid categories are: \(MistakeCategory.allCases.map(\.rawValue).joined(separator: ", ")). Severity must be major or minor. Arrays can be empty. expressions lists 0–5 reusable, exam-appropriate expressions worth memorizing from your improvedVersion; prefer collocations and sentence frames over single common words, and never list phrases the student already used correctly. Prioritize up to 12 exam-relevant corrections. Avoid nitpicking acceptable usage. Missing task content belongs in majorErrors, not an invented original correction span. Each original MUST be an exact substring of the supplied essay. Do not penalize suspected OCR errors without evidence; input has been user-confirmed. Return a complete JSON object, without markdown fences.
         """
     }
     static func user(_ input: GradingInput) throws -> String {

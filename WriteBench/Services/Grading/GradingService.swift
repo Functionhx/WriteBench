@@ -28,18 +28,22 @@ enum GradingError: LocalizedError {
         case .missingKey: "尚未配置 DeepSeek API Key。请前往设置填入 API Key 后再评卷。"
         case .missingRubric: "找不到本题型的评分标准，请重新安装完整的应用。"
         case .http(let status): status == 401 ? "API Key 验证失败，请在 Settings 中更新。" : status == 402 ? "DeepSeek 余额不足，请检查账户。" : status == 429 ? "DeepSeek 请求过于频繁，请稍后重试。" : "DeepSeek 请求失败（HTTP \(status)），请稍后重试。"
-        case .incomplete: "三位评审未全部完成。请重试；不会使用部分评分计算总分。"
+        case .incomplete: "评审未全部完成。请重试；不会使用部分评分计算总分。"
         }
     }
 }
 
 enum ScoreAggregator {
-    static func aggregate(_ results: [ReviewerResult], task: WritingTask, isDemo: Bool) throws -> GradingReport {
-        guard results.count == 3, Set(results.map(\.judge)) == Set(Judge.allCases) else { throw GradingError.incomplete }
+    /// Three judges give the median; a single judge is a quick review with no agreement measure.
+    static func aggregate(_ results: [ReviewerResult], task: WritingTask, isDemo: Bool, judges: [Judge] = Judge.allCases) throws -> GradingReport {
+        guard judges.count == 1 || judges.count == 3, results.count == judges.count, Set(judges).count == judges.count,
+              Set(results.map(\.judge)) == Set(judges) else { throw GradingError.incomplete }
         for result in results { try validate(result.response, task: task) }
         let scores = results.map(\.response.score).sorted()
-        let spread = scores[2] - scores[0]
-        return GradingReport(reviewers: results.sorted { $0.judge.rawValue < $1.judge.rawValue }, finalScore: scores[1], spread: spread, confidence: spread <= 1 ? .high : spread <= 2 ? .medium : .low, rubricVersion: RubricLoader.version, promptVersion: GraderPrompt.version, isDemo: isDemo, timestamp: Date())
+        let spread = scores[scores.count - 1] - scores[0]
+        let mode: GradingMode = judges.count == 1 ? .quick : .full
+        let confidence: Confidence = mode == .quick ? .single : spread <= 1 ? .high : spread <= 2 ? .medium : .low
+        return GradingReport(reviewers: results.sorted { $0.judge.rawValue < $1.judge.rawValue }, finalScore: scores[scores.count / 2], spread: spread, confidence: confidence, rubricVersion: RubricLoader.version, promptVersion: GraderPrompt.version, isDemo: isDemo, timestamp: Date(), mode: mode)
     }
     static func validate(_ response: JudgeResponse, task: WritingTask) throws {
         guard response.score.isFinite, (0...task.maxScore).contains(response.score) else { throw GradingError.invalidResponse("分数超出题型范围") }
@@ -54,21 +58,24 @@ struct GradingCoordinator: Sendable {
     let service: any EssayGradingService
     // Reserved for explicit opt-in arbitration. v1 never makes a hidden fourth paid call.
     var chiefExaminer: (any ChiefExaminerService)? = nil
-    func grade(_ input: GradingInput, isDemo: Bool, onProgress: @escaping @Sendable (GradingProgressEvent) async -> Void = { _ in }) async throws -> GradingReport {
+    func grade(_ input: GradingInput, isDemo: Bool, judges: [Judge] = Judge.allCases, onProgress: @escaping @Sendable (GradingProgressEvent) async -> Void = { _ in }) async throws -> GradingReport {
+        let started = Date()
         let results = try await withThrowingTaskGroup(of: ReviewerResult.self) { group in
             defer { group.cancelAll() }
-            for judge in Judge.allCases {
+            for judge in judges {
                 group.addTask {
                     try Task.checkCancellation()
                     await onProgress(.started(judge))
+                    let judgeStarted = Date()
                     do {
-                        let result: ReviewerResult
+                        var result: ReviewerResult
                         if let streaming = service as? any StreamingEssayGradingService {
                             result = try await streaming.grade(input, judge: judge) { text in await onProgress(.preview(judge, text)) }
                         } else { result = try await service.grade(input, judge: judge) }
                         try Task.checkCancellation()
                         guard result.judge == judge else { throw GradingError.invalidResponse("评审身份不匹配") }
                         try ScoreAggregator.validate(result.response, task: input.task)
+                        result.duration = Date().timeIntervalSince(judgeStarted)
                         await onProgress(.completed(result))
                         return result
                     } catch {
@@ -84,7 +91,9 @@ struct GradingCoordinator: Sendable {
             return collected
         }
         try Task.checkCancellation()
-        return try ScoreAggregator.aggregate(results, task: input.task, isDemo: isDemo)
+        var report = try ScoreAggregator.aggregate(results, task: input.task, isDemo: isDemo, judges: judges)
+        report.duration = Date().timeIntervalSince(started)
+        return report
     }
 }
 
@@ -95,4 +104,4 @@ enum RubricLoader {
         return try String(contentsOf: url, encoding: .utf8)
     }
 }
-enum GraderPrompt { static let version = "1.2.0" }
+enum GraderPrompt { static let version = "1.3.0" }

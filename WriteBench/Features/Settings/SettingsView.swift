@@ -1,7 +1,16 @@
 import SwiftUI
+import SwiftData
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
+    var showsBackup = true
     @AppStorage("showLiveWordCount") private var showLiveWordCount = false
+    @AppStorage("examTimeLimit") private var examTimeLimit = false
+    @AppStorage("autoSubmitAtLimit") private var autoSubmitAtLimit = false
+    @AppStorage("quickJudge") private var quickJudge = Judge.b
+    @AppStorage(UsageCost.inputKey) private var priceInput = 0.0
+    @AppStorage(UsageCost.cachedKey) private var priceCached = 0.0
+    @AppStorage(UsageCost.outputKey) private var priceOutput = 0.0
     @AppStorage("deepSeekModel") private var model = DeepSeekClient.defaultModel
     @AppStorage("judgeProviderA") private var providerA = GradingProvider.deepSeek
     @AppStorage("judgeProviderB") private var providerB = GradingProvider.deepSeek
@@ -27,6 +36,11 @@ struct SettingsView: View {
                         Label("答题偏好", systemImage: "textformat.123").font(.system(size: 18, weight: .semibold)).labelStyle(BlueIconLabelStyle())
                         Toggle("答题时显示词数", isOn: $showLiveWordCount).toggleStyle(.switch).accessibilityIdentifier("showLiveWordCountSetting")
                         Text("默认关闭，交卷后再显示本次词数。开启后，所有考试的答题页显示实时计数；中文译文显示字符数。").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                        Divider().padding(.vertical, 4)
+                        Toggle("考试限时（倒计时）", isOn: $examTimeLimit).toggleStyle(.switch).accessibilityIdentifier("examTimeLimitSetting")
+                        Toggle("到点自动交卷（三位评审）", isOn: $autoSubmitAtLimit).toggleStyle(.checkbox).disabled(!examTimeLimit).padding(.leading, 2)
+                        Text("开启后答题页显示剩余时间，最后 5 分钟变色，到点提示音；不自动交卷时可继续作答并显示超时。限时：" + WritingTask.allCases.map { "\($0.exam == .ielts ? "雅思" : $0.exam == .cet6 ? "六级" : "考研")\($0.title) \($0.suggestedMinutes)" }.joined(separator: " · ") + " 分钟。")
+                            .font(.system(size: 12)).foregroundStyle(WB.secondary).lineSpacing(3)
                     }
                 }
                 providerCard
@@ -43,6 +57,12 @@ struct SettingsView: View {
                         Text("直接填写即可使用。默认只在本次运行中保留；无需输入 Mac 密码。").font(.system(size: 11)).foregroundStyle(WB.secondary)
                         HStack { Text("Model").font(.system(size: 12, weight: .medium)).frame(width: 70, alignment: .leading); TextField("Model ID", text: $model).textFieldStyle(.roundedBorder).frame(maxWidth: 340) }
                         Text("默认：\(DeepSeekClient.defaultModel) · MAX 思考。模型 ID 可修改，不会自动切换。").font(.system(size: 11)).foregroundStyle(WB.secondary)
+                        HStack(spacing: 10) {
+                            Text("价格").font(.system(size: 12, weight: .medium)).frame(width: 70, alignment: .leading)
+                            priceField("输入", $priceInput); priceField("缓存命中", $priceCached); priceField("输出", $priceOutput)
+                            Text("元 / 百万 tokens").font(.system(size: 11)).foregroundStyle(WB.secondary)
+                        }
+                        Text("按 DeepSeek 官网当前价格填写后，评阅页和统计页显示估算花费；留空只显示 token 数。").font(.system(size: 11)).foregroundStyle(WB.secondary)
                         HStack {
                             Button { testConnection() } label: { Label(testing ? "Connecting…" : "Test connection", systemImage: "network") }.buttonStyle(QuietButtonStyle()).disabled(!keyExists || testing)
                             if keyExists { Button("清除 Key") { Task { do { try await DeepSeekCredentials.forget(); keyExists = false; failed = false; status = "API Key 已移除。" } catch { showError(error) } } }.buttonStyle(QuietButtonStyle()) }
@@ -60,6 +80,7 @@ struct SettingsView: View {
                         settingsNote("Exam scales", "英语一：小作文 / 10，大作文 / 20；CET-6 写作原始分 / 15；IELTS 单项任务 band / 9。")
                     }
                 }
+                if showsBackup { BackupCard() }
                 HStack(spacing: 10) { BrandMark(size: 24); Text("WriteBench \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")").font(.system(size: 12, weight: .medium)); Text("Made for a more deliberate writing practice.").font(.system(size: 11)).foregroundStyle(WB.secondary) }.padding(.top, 4)
             }.frame(maxWidth: 860).padding(32).frame(maxWidth: .infinity, alignment: .leading)
         }.task { await DeepSeekCredentials.restoreRememberedKey(); keyExists = DeepSeekCredentials.hasSessionKey }
@@ -72,8 +93,20 @@ struct SettingsView: View {
                 judgePicker(.b, selection: $providerB)
                 judgePicker(.c, selection: $providerC)
                 Text("三位评审独立阅读相同的原题和作文，本机取中位数。任一评审失败都不会生成总分或自动切换服务。").font(.system(size: 12)).foregroundStyle(WB.secondary).lineSpacing(4)
+                Divider()
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) { Text("快速单评").font(.system(size: 13, weight: .semibold)); Text("答题页“快速单评”或 ⇧⌘↩ · 只请一位评审，适合草稿").font(.system(size: 11)).foregroundStyle(WB.secondary) }
+                    Spacer()
+                    Picker("快速单评", selection: $quickJudge) {
+                        ForEach(Judge.allCases) { judge in Text("\(judge.title) · \(provider(judge).title)").tag(judge) }
+                    }.labelsHidden().frame(width: 240).accessibilityIdentifier("quickJudge")
+                }
             }
         }
+    }
+    private func provider(_ judge: Judge) -> GradingProvider { switch judge { case .a: providerA; case .b: providerB; case .c: providerC } }
+    private func priceField(_ title: String, _ value: Binding<Double>) -> some View {
+        TextField(title, value: value, format: .number.precision(.fractionLength(0...4))).textFieldStyle(.roundedBorder).frame(width: 74).help(title)
     }
     private func judgePicker(_ judge: Judge, selection: Binding<GradingProvider>) -> some View {
         HStack {
@@ -134,5 +167,43 @@ struct SettingsView: View {
                 failed = false; status = models.contains(model) ? "连接成功，当前模型可用。" : "连接成功。账户可用模型：" + models.joined(separator: ", ")
             } catch { showError(error) }
         }
+    }
+}
+
+private struct BackupCard: View {
+    @Environment(\.modelContext) private var context
+    @State private var status: String?
+    @State private var failed = false
+    var body: some View {
+        Card {
+            VStack(alignment: .leading, spacing: 14) {
+                Label("数据备份", systemImage: "arrow.up.arrow.down.circle").font(.system(size: 18, weight: .semibold)).labelStyle(BlueIconLabelStyle())
+                Text("导出为一个 JSON 文件，包含全部作文、评阅、草稿、题库、目录信息、复习卡和图片；不含 API Key 与 Codex 登录信息。恢复时只添加本机没有的记录，不覆盖现有内容。")
+                    .font(.system(size: 12)).foregroundStyle(WB.secondary).lineSpacing(4)
+                HStack {
+                    Button { export() } label: { Label("导出备份…", systemImage: "square.and.arrow.up") }.buttonStyle(QuietButtonStyle()).accessibilityIdentifier("exportBackup")
+                    Button { restore() } label: { Label("从备份恢复…", systemImage: "square.and.arrow.down") }.buttonStyle(QuietButtonStyle()).accessibilityIdentifier("restoreBackup")
+                    Spacer()
+                }
+                if let status { Label(status, systemImage: failed ? "exclamationmark.circle" : "checkmark.circle").font(.system(size: 12)).foregroundStyle(failed ? WB.amber : WB.green).textSelection(.enabled) }
+            }
+        }
+    }
+    private func export() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]; panel.nameFieldStringValue = BackupService.suggestedFileName; panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let data = try BackupService.export(from: context)
+            try data.write(to: url, options: .atomic)
+            failed = false; status = "已导出到 \(url.lastPathComponent)（\(ByteCountFormatter.string(fromByteCount: Int64(data.count), countStyle: .file))）。"
+        } catch { failed = true; status = error.localizedDescription }
+    }
+    private func restore() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]; panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do { failed = false; status = try BackupService.restore(try Data(contentsOf: url), into: context).text }
+        catch { failed = true; status = error.localizedDescription }
     }
 }

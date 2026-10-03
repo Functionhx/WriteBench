@@ -1,11 +1,12 @@
 import SwiftUI
 
 enum ReviewSection: String, CaseIterable, Identifiable {
-    case overview, feedback, examiners, corrections, improved, rewrite
+    case overview, progress, feedback, examiners, corrections, improved, rewrite
     var id: String { rawValue }
     func title(isTranslation: Bool) -> String {
         switch self {
         case .overview: "总分与结论"
+        case .progress: "与上一稿对比"
         case .feedback: "优点与不足"
         case .examiners: "评审意见"
         case .corrections: "逐句修改"
@@ -18,12 +19,13 @@ enum ReviewSection: String, CaseIterable, Identifiable {
 struct ReviewOutline: View {
     let selection: ReviewSection
     let isTranslation: Bool
+    var sections: [ReviewSection] = ReviewSection.allCases
     var onSelect: (ReviewSection) -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             Text("本篇目录").font(.system(size: 11, weight: .medium)).foregroundStyle(WB.secondary)
                 .padding(.horizontal, 12).padding(.bottom, 13)
-            ForEach(ReviewSection.allCases) { section in
+            ForEach(sections) { section in
                 Button { onSelect(section) } label: {
                     Text(section.title(isTranslation: isTranslation))
                         .font(.system(size: 12, weight: selection == section ? .medium : .regular))

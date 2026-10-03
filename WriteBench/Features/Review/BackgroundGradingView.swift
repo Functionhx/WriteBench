@@ -19,7 +19,7 @@ struct BackgroundGradingView: View {
                         Text("\(job.submission.input.task.fullTitle) · \(job.submission.countText)").font(.system(size: 11)).foregroundStyle(WB.secondary).lineLimit(1)
                     }
                     Spacer(minLength: 8)
-                    Text("\(job.completedCount)/3 位完成 · \(job.elapsedText(at: clock.date))").font(.system(size: 11)).monospacedDigit().foregroundStyle(WB.secondary)
+                    Text("\(job.isQuick ? "快速单评 · " : "")\(job.completedCount)/\(job.total) 位完成 · \(job.elapsedText(at: clock.date))").font(.system(size: 11)).monospacedDigit().foregroundStyle(WB.secondary)
                     Button(job.phase.isRunning ? "查看进度" : "评阅详情") { showingDetails = true }.buttonStyle(QuietButtonStyle()).accessibilityIdentifier("showGradingProgress")
                     if job.phase.isRunning {
                         Button("取消", action: onCancel).buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(WB.secondary).disabled(job.phase == .cancelling)
@@ -28,8 +28,8 @@ struct BackgroundGradingView: View {
                         IconButton(symbol: "xmark", help: "收起评阅状态", action: onDismiss)
                     }
                 }
-                ProgressView(value: Double(job.completedCount), total: 3).tint(WB.blue)
-                    .accessibilityLabel("已完成 \(job.completedCount) 位评审，共 3 位")
+                ProgressView(value: Double(job.completedCount), total: Double(job.total)).tint(WB.blue)
+                    .accessibilityLabel("已完成 \(job.completedCount) 位评审，共 \(job.total) 位")
             }.padding(.horizontal, 32).padding(.vertical, 12).background(WB.tint.opacity(0.65))
         }
         .sheet(isPresented: $showingDetails, onDismiss: {
@@ -57,8 +57,8 @@ struct GradingProgressView: View {
             }.padding(24)
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text(job.phase == .completed ? "三位独立评审已完成，完整结论与总分已保存到历史。" : job.phase == .failed || job.phase == .cancelled ? "本次未生成总分。已收到的评语片段不作为最终评分，提交原稿保留在下方。" : "进度按实际完成的评审计数。下方为实时评语，总分将在三位评审全部完成后生成。").font(.system(size: 12)).foregroundStyle(WB.secondary)
-                    ForEach(Judge.allCases) { judge in
+                    Text(job.phase == .completed ? (job.isQuick ? "快速单评已完成，结论与分数已保存到历史。" : "三位独立评审已完成，完整结论与总分已保存到历史。") : job.phase == .failed || job.phase == .cancelled ? "本次未生成总分。已收到的评语片段不作为最终评分，提交原稿保留在下方。" : job.isQuick ? "快速单评：只请一位评审，速度更快、花费更少，没有评审一致性。" : "进度按实际完成的评审计数。下方为实时评语，总分将在三位评审全部完成后生成。").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                    ForEach(job.activeJudges) { judge in
                         Card(padding: 20) {
                             VStack(alignment: .leading, spacing: 12) {
                                 HStack {

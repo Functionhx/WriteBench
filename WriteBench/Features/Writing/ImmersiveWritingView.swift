@@ -3,9 +3,11 @@ import SwiftUI
 /// The only workspace that can edit or submit an answer.
 struct ImmersiveWritingView: View {
     @AppStorage("showLiveWordCount") private var showLiveWordCount = false
+    @AppStorage("examTimeLimit") private var examTimeLimit = false
     @Bindable var store: WritingStore
     var isRecognizing: Bool
     var onSubmit: () -> Void
+    var onQuickSubmit: () -> Void
     var onImport: () -> Void
     var onCancelOCR: () -> Void
     var body: some View {
@@ -16,7 +18,10 @@ struct ImmersiveWritingView: View {
                 Spacer()
                 Text(store.task.fullTitle).font(.system(size: 13, weight: .medium)).foregroundStyle(WB.secondary)
                 Spacer()
-                Label(store.timerText, systemImage: "clock").font(.system(size: 14)).monospacedDigit().foregroundStyle(WB.ink).accessibilityLabel("作答用时 \(store.timerText)")
+                timer
+                Button("快速单评", action: onQuickSubmit).buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(WB.secondary)
+                    .disabled(store.essay.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isGrading || isRecognizing)
+                    .keyboardShortcut(.return, modifiers: [.command, .shift]).help("只请一位评审，适合草稿；⇧⌘↩").accessibilityIdentifier("quickHandIn")
                 Button("交卷", action: onSubmit).buttonStyle(ExamSubmitStyle()).disabled(store.essay.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isGrading || isRecognizing).keyboardShortcut(.return, modifiers: .command).accessibilityIdentifier("handInEssay")
             }.padding(.horizontal, 32).frame(height: 62)
             Rectangle().fill(Color.black.opacity(0.07)).frame(height: 1)
@@ -36,6 +41,18 @@ struct ImmersiveWritingView: View {
                     }
                 }
             }
+    }
+    @ViewBuilder private var timer: some View {
+        if examTimeLimit {
+            let limit = TimeInterval(store.task.suggestedMinutes * 60), remaining = limit - store.elapsed
+            let text = remaining >= 0 ? "剩余 \(WritingStore.clock(remaining))" : "超时 +\(WritingStore.clock(-remaining))"
+            Label(text, systemImage: remaining >= 0 ? "timer" : "exclamationmark.circle").font(.system(size: 14, weight: remaining < 300 ? .medium : .regular)).monospacedDigit()
+                .foregroundStyle(remaining < 300 ? WB.amber : WB.ink)
+                .help("考试限时 \(store.task.suggestedMinutes) 分钟 · 已用 \(store.timerText)")
+                .accessibilityLabel(remaining >= 0 ? "剩余时间 \(WritingStore.clock(remaining))" : "已超时 \(WritingStore.clock(-remaining))")
+        } else {
+            Label(store.timerText, systemImage: "clock").font(.system(size: 14)).monospacedDigit().foregroundStyle(WB.ink).accessibilityLabel("作答用时 \(store.timerText)")
+        }
     }
     private var question: some View {
         VStack(alignment: .leading, spacing: 22) {

@@ -63,6 +63,24 @@ import SwiftData
     var subtype: String
     var prompt: String
     var date: Date
+    // Defaults allow lightweight migration of questions saved before 1.5.
+    var year: Int? = nil
+    var label: String = ""
     @Attribute(.externalStorage) var image: Data?
-    init(title: String, task: WritingTask, prompt: String, image: Data? = nil) { id = UUID(); self.title = title; subtype = task.rawValue; self.prompt = prompt; date = Date(); self.image = image }
+    init(title: String, task: WritingTask, prompt: String, image: Data? = nil, year: Int? = nil, label: String = "") {
+        id = UUID(); self.title = title; subtype = task.rawValue; self.prompt = prompt; date = Date(); self.image = image; self.year = year; self.label = label
+    }
+}
+
+/// Attempts per question, so the bank can show what has been practised.
+@MainActor struct PracticeIndex {
+    private var byQuestion: [String: [EssaySession]] = [:]
+    init(_ sessions: [EssaySession]) {
+        for session in sessions where !session.isDemo {
+            byQuestion[Self.key(session.subtype, session.question), default: []].append(session)
+        }
+        for key in byQuestion.keys { byQuestion[key]?.sort { $0.date < $1.date } }
+    }
+    func attempts(_ task: WritingTask, _ prompt: String) -> [EssaySession] { byQuestion[Self.key(task.rawValue, prompt)] ?? [] }
+    private static func key(_ subtype: String, _ prompt: String) -> String { subtype + "\u{1}" + QuestionBank.key(prompt) }
 }
