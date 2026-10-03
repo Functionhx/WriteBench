@@ -35,6 +35,7 @@
 		57B1584FB0F0DC411801C7D5 /* WritingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3788E5EB782131E544DDEDC /* WritingView.swift */; };
 		611D1CBBEE2017C06DCD6D8D /* GradingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634F608AF0DF72D3DE51E438 /* GradingService.swift */; };
 		6C1F7BEC5994E87DFA1CEF27 /* DeepSeekClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A399A503863E6199B340A50C /* DeepSeekClient.swift */; };
+		6C3E278AD86905C7C0A63BCE /* QuestionText.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0DD31CC0B614898B36ED76 /* QuestionText.swift */; };
 		76165A1D695B6E1E39EE5906 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A5D3F3824C11B7B262C308 /* HistoryView.swift */; };
 		7A7FFA1F4A7D393FDC0F3AA0 /* EssayHistoryGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11E52B4F1877F33DAEDBED32 /* EssayHistoryGroup.swift */; };
 		7ADD51F051853BB04DC26A4D /* WindowImmersionBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A76CC13C7CABACEC80CBAE /* WindowImmersionBridge.swift */; };
@@ -149,6 +150,7 @@
 		D7E5B6AA16B1E69446387608 /* RevisionViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RevisionViews.swift; sourceTree = "<group>"; };
 		DA0CA900CDD0D63C0AA6C39F /* GradingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradingModels.swift; sourceTree = "<group>"; };
 		DA8E73D997ED19A98227B24C /* BackgroundGradingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundGradingView.swift; sourceTree = "<group>"; };
+		DD0DD31CC0B614898B36ED76 /* QuestionText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionText.swift; sourceTree = "<group>"; };
 		E6B358A2E1043646F5A65FA4 /* UsageCost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageCost.swift; sourceTree = "<group>"; };
 		E94CDCC1049F7BD4C287AF84 /* WriteBench.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WriteBench.entitlements; sourceTree = "<group>"; };
 		EE5F2FF0974E091C6E391D13 /* QuestionTextReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionTextReader.swift; sourceTree = "<group>"; };
@@ -395,6 +397,7 @@
 				9AA993471F8CFF92BD9B2956 /* BrandArt.swift */,
 				D78510A02F0F827272F84695 /* ExamTaskBadge.swift */,
 				CD6C23EF9D33F68C7816C642 /* PlainTextEditor.swift */,
+				DD0DD31CC0B614898B36ED76 /* QuestionText.swift */,
 				51A76CC13C7CABACEC80CBAE /* WindowImmersionBridge.swift */,
 			);
 			path = Components;
@@ -558,6 +561,7 @@
 				A97D07FFDB81393349741F89 /* PracticeView.swift in Sources */,
 				291B90A1A7DDA40A4591BE8A /* QuestionBank.swift in Sources */,
 				3FF816DF3394076A7EAFCA8E /* QuestionLibraryView.swift in Sources */,
+				6C3E278AD86905C7C0A63BCE /* QuestionText.swift in Sources */,
 				17236CF00A287A2737947138 /* QuestionTextReader.swift in Sources */,
 				042D9A8FAAC22D71BDF6F7E4 /* ReviewCard.swift in Sources */,
 				DB3DEEA68D82D9F8BECF108E /* ReviewOutline.swift in Sources */,
@@ -655,7 +659,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -670,7 +674,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.6.0;
+				MARKETING_VERSION = 1.6.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -751,7 +755,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 9;
+				CURRENT_PROJECT_VERSION = 10;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -772,7 +776,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.6.0;
+				MARKETING_VERSION = 1.6.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

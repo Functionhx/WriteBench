@@ -75,7 +75,7 @@ struct GradingProgressView: View {
                     }
                     if let detail = job.detail { Label(detail, systemImage: "exclamationmark.circle").font(.system(size: 12)).foregroundStyle(WB.amber).textSelection(.enabled) }
                     DisclosureGroup("本次提交的题目与作答") {
-                        VStack(alignment: .leading, spacing: 16) { Text(job.submission.input.question).foregroundStyle(WB.secondary); Text(job.submission.input.essay) }
+                        VStack(alignment: .leading, spacing: 16) { Text(QuestionText.attributed(job.submission.input.question)).foregroundStyle(WB.secondary); Text(job.submission.input.essay) }
                             .font(.system(size: 13)).lineSpacing(5).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(.top, 12)
                     }.font(.system(size: 12))
                 }.padding(.horizontal, 24).padding(.bottom, 24)

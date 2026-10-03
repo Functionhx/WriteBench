@@ -100,7 +100,7 @@ struct QuestionLibraryView: View {
                             Text("已练 \(attempts.count) 次 · 最近 \(latest.finalScore.scoreText) / \(Int(item.task.maxScore))").font(.system(size: 11)).foregroundStyle(WB.green)
                         } else { Text("未练习").font(.system(size: 11)).foregroundStyle(WB.secondary) }
                     }
-                    Text(item.prompt).font(.system(size: 12)).foregroundStyle(WB.secondary).lineLimit(3).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(QuestionText.plain(item.prompt)).font(.system(size: 12)).foregroundStyle(WB.secondary).lineLimit(3).frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
         }.buttonStyle(.plain)

@@ -1,3 +1,9 @@
+# 1.6.1 validation · 2026-10-02
+
+- 65 Swift tests pass. New coverage: `<u>` markup renders as an underline in place and strips to plain text; a malformed tag degrades to plain text; the ruled editor keeps natural line height with spacing after each line and an even 36 pt pitch at 18 pt for Latin, CJK and blank lines.
+- The ruled editor was rendered offscreen in sans and serif with mixed English/Chinese text: every line sits on its own rule. In an isolated QA copy the English I translation shows (46)–(50) underlined inside the passage, and Settings shows a live editor preview.
+- The user's local English I translation questions were rewritten to the underline format by question id (17 questions, 1 matching draft); no graded essay was changed.
+
 # 1.6.0 validation · 2026-10-02
 
 - 63 Swift tests pass on Xcode 27.0. New coverage: English II small/large tasks (scales 10/15, 100/150 words, own rubrics loaded from the bundle), kaoyan task order, and the grader prompt carrying the 【配图说明】 transcription rule with the 0–15 scale.
