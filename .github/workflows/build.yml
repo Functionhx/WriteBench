@@ -22,13 +22,43 @@ jobs:
           dotnet-version: '10.0.x'
       - name: Publish WPF app
         run: dotnet publish platforms/windows/WriteBench/WriteBench.csproj -c Release -r win-x64 --self-contained true -o publish
-      - name: Validate domain and real OCR
+      - name: Validate domain, credentials, native WPF interactions and real OCR
         shell: pwsh
         run: |
           Copy-Item Documentation/TestImages/ocr-sample-1.png publish/ocr-fixture.png
-          $result = Start-Process "$pwd/publish/WriteBench.exe" -ArgumentList '--self-test' -Wait -PassThru
+          $result = Start-Process "$pwd/publish/WriteBench.exe" -ArgumentList '--self-test' -PassThru
+          if (-not $result.WaitForExit(180000)) { Stop-Process -Id $result.Id -Force; throw 'Self-test timed out' }
           if ($result.ExitCode -ne 0) { Get-Content publish/self-test-error.txt; exit 1 }
           Get-Content publish/self-test-passed.txt
+      - name: Render actual WPF screens
+        shell: pwsh
+        run: |
+          $result = Start-Process "$pwd/publish/WriteBench.exe" -ArgumentList '--render-preview' -PassThru
+          if (-not $result.WaitForExit(60000)) { Stop-Process -Id $result.Id -Force; throw 'Preview timed out' }
+          if ($result.ExitCode -ne 0) { Get-Content publish/preview-error.txt; exit 1 }
+      - name: Upload Windows verification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-verification
+          path: |
+            publish/*test*.txt
+            publish/*error*.txt
+            publish/windows-preview-*.png
+      - name: Package self-contained Windows x64 app
+        shell: pwsh
+        run: |
+          Remove-Item publish/ocr-fixture.png, publish/*test*.txt, publish/windows-preview-*.png -ErrorAction SilentlyContinue
+          Copy-Item platforms/windows/README.md publish/README.md
+          Copy-Item THIRD_PARTY_NOTICES.md publish/THIRD_PARTY_NOTICES.md
+          Compress-Archive -Path publish/* -DestinationPath WriteBench-Windows-x64.zip
+          (Get-FileHash WriteBench-Windows-x64.zip -Algorithm SHA256).Hash.ToLower() + '  WriteBench-Windows-x64.zip' | Set-Content WriteBench-Windows-x64.zip.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: WriteBench-Windows-x64
+          path: |
+            WriteBench-Windows-x64.zip
+            WriteBench-Windows-x64.zip.sha256
   android:
     runs-on: ubuntu-latest
     steps:

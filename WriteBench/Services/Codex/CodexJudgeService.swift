@@ -74,6 +74,7 @@ struct CodexJudgeService: EssayGradingService, ReportSynthesizer {
         guard var response = try? JudgeResponse.decodeProviderOutput(data) else { throw CodexError.malformed }
         response.corrections = CorrectionMatcher.anchored(response.corrections, in: input.essay)
         ScoreAggregator.reconcileSegments(&response, task: input.task)
+        response.translationLessons = TranslationTeaching.anchored(response.translationLessons, input: input)
         try ScoreAggregator.validate(response, task: input.task)
         return ReviewerResult(judge: judge, response: response, model: model.isEmpty ? "Codex automatic" : model, timestamp: Date(), provider: .codex, reasoningEffort: reasoning,
                               usage: CodexUsage.parse(result.stdout))
@@ -129,11 +130,22 @@ enum JudgeResponseSchema {
             "properties": ["source": string, "earned": number, "max": number, "note": string]]
         let segment: [String: Any] = ["type": "object", "additionalProperties": false, "required": ["comment", "maxScore", "number", "points", "score"],
             "properties": ["number": string, "score": number, "maxScore": number, "comment": string, "points": ["type": "array", "items": point]]]
+        let vocabulary: [String: Any] = ["type": "object", "additionalProperties": false,
+            "required": ["word", "partOfSpeech", "commonMeaning", "contextualMeaning"],
+            "properties": ["word": string, "partOfSpeech": string, "commonMeaning": string, "contextualMeaning": string]]
+        let group: [String: Any] = ["type": "object", "additionalProperties": false,
+            "required": ["source", "translation", "vocabulary", "techniques"],
+            "properties": ["source": string, "translation": string, "vocabulary": ["type": "array", "items": vocabulary], "techniques": strings]]
+        let lesson: [String: Any] = ["type": "object", "additionalProperties": false,
+            "required": ["number", "source", "groups", "referenceTranslation", "assemblyNotes", "studentAdvice"],
+            "properties": ["number": string, "source": string, "groups": ["type": "array", "items": group],
+                           "referenceTranslation": string, "assemblyNotes": strings, "studentAdvice": string]]
         let properties: [String: Any] = ["score": number, "taskCompletion": number, "language": number, "coherence": number, "register": number,
             "majorErrors": strings, "minorErrors": strings, "summary": string, "strengths": strings, "weaknesses": strings, "improvements": strings,
             "corrections": ["type": "array", "items": correction], "improvedVersion": string,
             "expressions": ["type": "array", "items": expression],
-            "segments": ["type": "array", "items": segment]]
+            "segments": ["type": "array", "items": segment],
+            "translationLessons": ["type": "array", "items": lesson]]
         return try JSONSerialization.data(withJSONObject: ["type": "object", "additionalProperties": false, "required": properties.keys.sorted(), "properties": properties], options: [.prettyPrinted, .sortedKeys])
     }
 }

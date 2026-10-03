@@ -76,3 +76,46 @@ private let responseTail = #", but check tense.","score":8,"taskCompletion":8,"l
     #expect(try JSONDecoder().decode(JudgeResponse.self, from: legacy).strengths.isEmpty)
     #expect(throws: (any Error).self) { try JudgeResponse.decodeProviderOutput(legacy) }
 }
+
+@Test func providerAcceptsNumericStringsAndEmptyOptionalErrorLists() throws {
+    let complete = #"{"summary":"Task completed"# + responseTail
+    var json = try #require(JSONSerialization.jsonObject(with: Data(complete.utf8)) as? [String: Any])
+    for field in ["score", "taskCompletion", "language", "coherence", "register"] { json[field] = "8.5" }
+    json["majorErrors"] = NSNull(); json.removeValue(forKey: "minorErrors"); json["corrections"] = NSNull()
+    let decoded = try JudgeResponse.decodeProviderOutput(JSONSerialization.data(withJSONObject: json))
+    #expect(decoded.score == 8.5 && decoded.language == 8.5)
+    #expect(decoded.majorErrors.isEmpty && decoded.minorErrors.isEmpty && decoded.corrections.isEmpty)
+    json.removeValue(forKey: "score")
+    do { _ = try JudgeResponse.decodeProviderOutput(JSONSerialization.data(withJSONObject: json)); Issue.record("Missing score must fail") }
+    catch { #expect(error.localizedDescription.contains("score")) }
+}
+private actor ReviewSequenceTransport: HTTPTransport {
+    let contents: [String]
+    var requests: [URLRequest] = []
+    init(_ contents: [String]) { self.contents = contents }
+    func data(for request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        let content = contents[min(requests.count, contents.count - 1)]
+        requests.append(request)
+        let json: [String: Any] = ["model": "fixture", "choices": [["finish_reason": "stop", "message": ["content": content]]], "usage": ["prompt_tokens": 10, "completion_tokens": 20]]
+        return (try JSONSerialization.data(withJSONObject: json), HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+    }
+}
+@Test func malformedCompletedReviewRetriesOnceAndCountsBothRequests() async throws {
+    let complete = #"{"summary":"Task completed"# + responseTail
+    let transport = ReviewSequenceTransport([#"{"summary":"Preview alone is not a score"}"#, complete])
+    let result = try await DeepSeekClient(apiKey: "fixture", model: "fixture", transport: transport).grade(streamedInput, judge: .a)
+    #expect(result.response.score == 8)
+    #expect(result.usage?.input == 20 && result.usage?.output == 40)
+    let requests = await transport.requests
+    #expect(requests.count == 2)
+    let body = try #require(requests.last?.httpBody)
+    let payload = try #require(JSONSerialization.jsonObject(with: body) as? [String: Any])
+    let messages = try #require(payload["messages"] as? [[String: String]])
+    #expect(messages[0]["content"]?.contains("previous completed response") == true)
+}
+@Test func malformedReviewRetryIsBoundedAndStillRequiresAScore() async throws {
+    let transport = ReviewSequenceTransport([#"{"summary":"Looks like 18.5 but has no structured score"}"#])
+    let client = DeepSeekClient(apiKey: "fixture", model: "fixture", transport: transport)
+    await #expect(throws: (any Error).self) { try await client.grade(streamedInput, judge: .a) }
+    #expect(await transport.requests.count == 2)
+}

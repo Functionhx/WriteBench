@@ -113,3 +113,18 @@ private actor CodexFixtureRunner: ProcessRunning {
     #expect(!DeepSeekCredentials.hasSessionKey)
     #expect(throws: GradingError.self) { try DeepSeekCredentials.load() }
 }
+
+@Test func localCredentialSurvivesReloadHasPrivatePermissionsAndCanBeRemoved() throws {
+    let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+    defer { try? FileManager.default.removeItem(at: directory) }
+    #expect(try LocalCredentialStore.load(directory: directory) == nil)
+    try LocalCredentialStore.save("  test-placeholder  \n", directory: directory)
+    #expect(try LocalCredentialStore.load(directory: directory) == "test-placeholder")
+    let file = directory.appendingPathComponent("deepseek.key")
+    #expect((try FileManager.default.attributesOfItem(atPath: directory.path)[.posixPermissions] as? NSNumber)?.intValue == 0o700)
+    #expect((try FileManager.default.attributesOfItem(atPath: file.path)[.posixPermissions] as? NSNumber)?.intValue == 0o600)
+    try LocalCredentialStore.save("replacement-placeholder", directory: directory)
+    #expect(try LocalCredentialStore.load(directory: directory) == "replacement-placeholder")
+    try LocalCredentialStore.remove(directory: directory)
+    #expect(try LocalCredentialStore.load(directory: directory) == nil)
+}

@@ -31,6 +31,17 @@ enum KeychainService {
         guard status == errSecSuccess, let data = result as? Data, let key = String(data: data, encoding: .utf8) else { throw KeychainError(status: status) }
         return key
     }
+    /// Read the original non-data-protection item without authentication UI.
+    static func loadLegacy() throws -> String {
+        let item: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "com.chen.WriteBench.deepseek", kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne, kSecUseAuthenticationUI as String: kSecUseAuthenticationUIFail]
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(item as CFDictionary, &result)
+        if status == errSecItemNotFound { throw GradingError.missingKey }
+        guard status == errSecSuccess, let data = result as? Data, let key = String(data: data, encoding: .utf8) else { throw KeychainError(status: status) }
+        return key
+    }
     static func exists() -> Bool {
         var item = query; item[kSecReturnData as String] = false
         return SecItemCopyMatching(item as CFDictionary, nil) == errSecSuccess

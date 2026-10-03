@@ -268,7 +268,7 @@ private struct UnavailableGrader: EssayGradingService {
                 throw GradingError.missingKey
             }) { _ in Issue.record("Missing credentials must never yield a review") }
             #expect(store.needsAPIKey)
-            #expect(store.stage == .answering && store.timerRunning)
+            #expect(store.stage == .answering && !store.timerRunning)
             #expect(store.gradingTask == nil)
             #expect(try context.fetchCount(FetchDescriptor<EssaySession>()) == 0)
             #expect(try context.fetch(FetchDescriptor<WritingDraft>()).first?.essay == input().essay)

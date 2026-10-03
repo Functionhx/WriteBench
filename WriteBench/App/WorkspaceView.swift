@@ -47,11 +47,11 @@ struct WorkspaceView: View {
         .onChange(of: scenePhase) { _, phase in if phase != .active { store.tick(); store.persistDraft() } }
         .onChange(of: destination) { _, next in if next != .write { store.tick(); store.persistDraft() } }
         .sheet(item: $review) { session in ReviewView(session: session) { if !store.isInSession || store.leaveAnswering() { store.beginRewrite($0); destination = .write; review = nil } } }
-        .alert("未配置 DeepSeek API Key", isPresented: $store.needsAPIKey) {
-            Button("继续作答", role: .cancel) { }
+        .alert("未读取到 DeepSeek API Key", isPresented: $store.needsAPIKey) {
+            Button("继续作答", role: .cancel) { store.resumeAnswering() }
             Button("前往设置") { if store.leaveAnswering() { destination = .settings } }
         } message: {
-            Text("评卷需要 DeepSeek API Key。作文草稿已保存在本机，本次未生成评分。请前往设置填入 API Key 后再交卷。")
+            Text("评卷需要 DeepSeek API Key。作文草稿已保存在本机，本次未生成评分。计时已暂停。请前往设置检查 Key 的保存状态后再交卷。")
         }
         .alert("WriteBench", isPresented: Binding(get: { store.error != nil }, set: { if !$0 { store.error = nil } })) { Button("OK") { store.error = nil } } message: { Text(store.error ?? "") }
     }

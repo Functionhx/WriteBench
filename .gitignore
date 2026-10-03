@@ -29,3 +29,5 @@ Documentation/codex-live-check.json
 # Per-machine IDE settings
 .idea/
 *.iml
+
+.codex-build/

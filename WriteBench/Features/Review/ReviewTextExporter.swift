@@ -19,6 +19,21 @@ import Foundation
                  + item.segment.points.map { "  · \($0.source)：\($0.earned.scoreText) / \($0.max.scoreText)\($0.note.isEmpty ? "" : "，" + $0.note)" }).joined(separator: "\n")
             }.joined(separator: "\n"))
         }
+        if !report.translationLessons.isEmpty {
+            sections.append("意群精讲\n" + report.translationLessons.map { lesson in
+                var lines = ["第 \(lesson.number) 句：\(lesson.source)"]
+                for (index, group) in lesson.groups.enumerated() {
+                    lines.append("意群 \(index + 1)：\(group.source)")
+                    lines += group.vocabulary.map { "  \($0.word) · \($0.partOfSpeech)｜常见义：\($0.commonMeaning)｜本句义：\($0.contextualMeaning)" }
+                    lines += group.techniques.map { "  翻译要点：" + $0 }
+                    lines.append("  意群译文：" + group.translation)
+                }
+                lines.append("完整译文：" + lesson.referenceTranslation)
+                lines += lesson.assemblyNotes.map { "组合要点：" + $0 }
+                lines.append("对照你的译文：" + lesson.studentAdvice)
+                return lines.joined(separator: "\n")
+            }.joined(separator: "\n\n"))
+        }
         if report.reviewers.count > 1 {
             sections.append("三位评审独立评分：" + report.reviewers.map { "\($0.judge.title) \($0.response.score.scoreText)" }.joined(separator: "，") + "（取中位数）")
         }

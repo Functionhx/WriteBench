@@ -47,14 +47,14 @@ WriteBench 把练习收敛为一条清晰的路径：选题、作答、评阅、
 | 平台 | 安装方式 | 当前状态 |
 | :--- | :--- | :--- |
 | **macOS 15+** | 下载 ZIP / DMG，将 WriteBench.app 放入 Applications | 原生 SwiftUI，Apple silicon + Intel |
-| **Windows 11 x64** | [下载便携 ZIP](https://github.com/Functionhx/WriteBench/releases/download/v1.3.0/WriteBench-0.1.0-Windows-x64.zip)，完整解压后运行 WriteBench.exe | 原生 WPF / .NET 10 · 0.1 预览版 |
+| **Windows 11 x64** | [下载便携 ZIP](https://github.com/Functionhx/WriteBench/releases/download/v1.9.1/WriteBench-1.9.1-Windows-x64.zip)，完整解压后运行 WriteBench.exe | 原生 WPF / .NET 10 · 1.9.1 |
 | **Android 13+** | [下载签名 APK](https://github.com/Functionhx/WriteBench/releases/download/v1.3.0/WriteBench-0.1.0-Android.apk)，在手机安装 | 原生 Android Views · 0.1 预览版 |
 
 macOS 当前是本地 ad-hoc 签名版本，尚未经过 Apple Developer ID 公证；Windows 预览版尚未进行 Authenticode 签名。Windows OCR 需要 Microsoft Visual C++ x64 运行库，详见[平台说明](platforms/windows/README.md)。公开仓库与安装包不包含 API Key、Codex 登录信息或用户作文。
 
 ## 开始使用
 
-1. 打开 **Settings**，填写自己的 DeepSeek API Key，点击 **使用此 Key**。默认仅在本次运行内存中保留；macOS 可勾选 **在这台 Mac 上记住 Key**。提交时只读已启用的内存 Key，记住与恢复在后台完成。
+1. 打开 **Settings**，填写自己的 DeepSeek API Key，点击 **使用此 Key**。macOS 默认勾选 **在这台 Mac 上记住 Key**，重启和更新后自动读取。保存为仅当前用户可读写的本机文件（非加密、不随作文备份导出）；取消勾选并保存则仅本次运行使用。
 2. 使用 Codex 评审时，先安装[官方 Codex CLI](https://learn.chatgpt.com/docs/codex-cli)，在终端运行 `codex login`。已登录的用户直接点击 **Check Connection**，无需再走浏览器。
 3. 选择考试与题型。macOS 点击题目卡片的 **导入文字**，粘贴完整题目，或选择 `.txt` / `.md` 文件（UTF-8 / UTF-16），编辑确认后自动保存；也可以导入题目图片。
 4. 点击 **开始答题**，在沉浸式界面完成作文，然后 **交卷**。
@@ -137,7 +137,7 @@ platforms/android/   Android Studio 项目与手机界面
 scripts/             构建、图标生成与显式联调脚本
 ```
 
-macOS 自动化测试覆盖 72 个案例，Android 有 5 个领域测试与 2 个实际设备服务测试；Windows 通过评分、持久化、字段校验及实际 OCR 自检。GPT-6 Astra/MAX 已通过实际 Swift 子进程完成样例评卷；DeepSeek 已验证官方模型接口连接。后台、流式输出及版本路径已用隔离测试验证；本次未执行完整付费三评，需用户填入有效 Key 后使用。
+macOS 自动化测试覆盖 82 个案例，Android 有 5 个领域测试与 2 个实际设备服务测试；Windows 通过评分、持久化、字段校验及实际 OCR 自检。GPT-6 Astra/MAX 已通过实际 Swift 子进程完成样例评卷；DeepSeek 已验证官方模型接口连接。后台、流式输出及版本路径已用隔离测试验证；本次未执行完整付费三评，需用户填入有效 Key 后使用。
 
 <details>
 <summary><strong>更多文档</strong></summary>
@@ -156,3 +156,5 @@ macOS 自动化测试覆盖 72 个案例，Android 有 5 个领域测试与 2 �
 ---
 
 <p align="center">WriteBench · 一次练习，一份原稿，一次认真重写。</p>
+
+考研翻译报告支持“意群精讲”：词汇、结构与翻译要点、分组译文及完整译文组合；英一只讲解作答划线句，英二按全文句子展开。点击交卷即暂停计时，提交受阻时可点击继续作答恢复。

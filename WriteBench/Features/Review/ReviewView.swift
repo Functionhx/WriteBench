@@ -73,7 +73,7 @@ struct ReviewView: View {
     private var sections: [ReviewSection] {
         let hasSegments = !(session.report?.segmentScores.isEmpty ?? true)
         let hasRaw = (session.report?.reviewers.count ?? 0) > 1
-        return ReviewSection.allCases.filter { ($0 != .progress || baseline != nil) && ($0 != .segments || hasSegments) && ($0 != .examiners || hasRaw) }
+        return ReviewSection.allCases.filter { ($0 != .progress || baseline != nil) && ($0 != .segments || hasSegments) && ($0 != .translationLearning || !(session.report?.translationLessons.isEmpty ?? true)) && ($0 != .examiners || hasRaw) }
     }
     private var reportContent: some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -84,6 +84,7 @@ struct ReviewView: View {
                 scoreCard(report).reviewAnchor(.overview)
                 if let baseline { RevisionComparisonCard(session: session, baseline: baseline.session, baselineNumber: baseline.label).reviewAnchor(.progress) }
                 if !report.segmentScores.isEmpty { segmentCard(report).reviewAnchor(.segments) }
+                if !report.translationLessons.isEmpty { TranslationLessonCard(lessons: report.translationLessons).reviewAnchor(.translationLearning) }
                 Card {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("评阅结论").font(.system(size: 18, weight: .semibold))

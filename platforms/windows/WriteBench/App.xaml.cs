@@ -6,14 +6,15 @@ namespace WriteBench;
 
 public partial class App : Application
 {
-    protected override void OnStartup(StartupEventArgs e)
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
         if (e.Args.Contains("--self-test"))
         {
             try
             {
-                SelfTest.Run();
+                await SelfTest.Run();
                 Shutdown(0);
             }
             catch (Exception error) { File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "self-test-error.txt"), error.ToString()); Shutdown(1); }
@@ -24,21 +25,20 @@ public partial class App : Application
             try
             {
                 var window = new MainWindow(preview: true);
-                var view = (FrameworkElement)window.Content;
-                view.Measure(new Size(1320, 840));
-                view.Arrange(new Rect(0, 0, 1320, 840));
-                view.UpdateLayout();
-                var bitmap = new RenderTargetBitmap(1320, 840, 96, 96, PixelFormats.Pbgra32);
-                bitmap.Render(view);
-                var encoder = new PngBitmapEncoder();
-                encoder.Frames.Add(BitmapFrame.Create(bitmap));
-                using var file = File.Create(Path.Combine(AppContext.BaseDirectory, "windows-preview.png"));
-                encoder.Save(file);
+                foreach (string page in new[] { "Write", "Settings", "answer" }) {
+                    window.PreviewPage(page);
+                    var view = (FrameworkElement)window.Content;
+                    view.Measure(new Size(1320, 840)); view.Arrange(new Rect(0, 0, 1320, 840)); view.UpdateLayout();
+                    var bitmap = new RenderTargetBitmap(1320, 840, 96, 96, PixelFormats.Pbgra32); bitmap.Render(view);
+                    var encoder = new PngBitmapEncoder(); encoder.Frames.Add(BitmapFrame.Create(bitmap));
+                    using var file = File.Create(Path.Combine(AppContext.BaseDirectory, $"windows-preview-{page}.png")); encoder.Save(file);
+                }
                 Shutdown(0);
             }
             catch (Exception error) { File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "preview-error.txt"), error.ToString()); Shutdown(1); }
             return;
         }
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
         new MainWindow().Show();
     }
 }

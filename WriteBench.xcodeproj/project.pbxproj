@@ -36,6 +36,8 @@
 		611D1CBBEE2017C06DCD6D8D /* GradingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634F608AF0DF72D3DE51E438 /* GradingService.swift */; };
 		6C1F7BEC5994E87DFA1CEF27 /* DeepSeekClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A399A503863E6199B340A50C /* DeepSeekClient.swift */; };
 		6C3E278AD86905C7C0A63BCE /* QuestionText.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0DD31CC0B614898B36ED76 /* QuestionText.swift */; };
+		6EF13FD59119BAB281533752 /* TranslationLessonCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11CD6DC48ADA2A2066B58A3 /* TranslationLessonCard.swift */; };
+		6F4C0EC660A3DC5C627C0AC4 /* TranslationLesson.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6211317C38F78901403EE347 /* TranslationLesson.swift */; };
 		76165A1D695B6E1E39EE5906 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 70A5D3F3824C11B7B262C308 /* HistoryView.swift */; };
 		7A7FFA1F4A7D393FDC0F3AA0 /* EssayHistoryGroup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11E52B4F1877F33DAEDBED32 /* EssayHistoryGroup.swift */; };
 		7ADD51F051853BB04DC26A4D /* WindowImmersionBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51A76CC13C7CABACEC80CBAE /* WindowImmersionBridge.swift */; };
@@ -117,6 +119,7 @@
 		51A76CC13C7CABACEC80CBAE /* WindowImmersionBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowImmersionBridge.swift; sourceTree = "<group>"; };
 		56792E2C1501DBCE7B80739B /* kaoyan_english2_translation.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = kaoyan_english2_translation.md; sourceTree = "<group>"; };
 		5AEB65E44D0601AEC6053865 /* Exam.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exam.swift; sourceTree = "<group>"; };
+		6211317C38F78901403EE347 /* TranslationLesson.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationLesson.swift; sourceTree = "<group>"; };
 		634F608AF0DF72D3DE51E438 /* GradingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradingService.swift; sourceTree = "<group>"; };
 		650B4D62F506EDDC71D6396A /* cet6_writing.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = cet6_writing.md; sourceTree = "<group>"; };
 		679F1D25813DBB4821B089EF /* WriteBenchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WriteBenchTests.swift; sourceTree = "<group>"; };
@@ -156,6 +159,7 @@
 		E6B358A2E1043646F5A65FA4 /* UsageCost.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UsageCost.swift; sourceTree = "<group>"; };
 		E94CDCC1049F7BD4C287AF84 /* WriteBench.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = WriteBench.entitlements; sourceTree = "<group>"; };
 		EE5F2FF0974E091C6E391D13 /* QuestionTextReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionTextReader.swift; sourceTree = "<group>"; };
+		F11CD6DC48ADA2A2066B58A3 /* TranslationLessonCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationLessonCard.swift; sourceTree = "<group>"; };
 		F3788E5EB782131E544DDEDC /* WritingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WritingView.swift; sourceTree = "<group>"; };
 		F54C82E0AE1ACA592616CDDB /* OCRConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OCRConfirmationView.swift; sourceTree = "<group>"; };
 		F7B9132C06548AC9B8B44070 /* ReviewOutline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewOutline.swift; sourceTree = "<group>"; };
@@ -178,6 +182,7 @@
 				029A81F1C48B2FAE8914576B /* ReviewTextExporter.swift */,
 				0F9DB3748FBE72E213C6EB37 /* ReviewView.swift */,
 				D7E5B6AA16B1E69446387608 /* RevisionViews.swift */,
+				F11CD6DC48ADA2A2066B58A3 /* TranslationLessonCard.swift */,
 			);
 			path = Review;
 			sourceTree = "<group>";
@@ -227,6 +232,7 @@
 				5AEB65E44D0601AEC6053865 /* Exam.swift */,
 				DA0CA900CDD0D63C0AA6C39F /* GradingModels.swift */,
 				71E6EE384D62168057B908A3 /* QuestionBank.swift */,
+				6211317C38F78901403EE347 /* TranslationLesson.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -576,6 +582,8 @@
 				FBEB290B54B4DA0E050F77E1 /* StatisticsView.swift in Sources */,
 				DB8D1A55F0E264D96E7E1D8D /* TextQuestionImportView.swift in Sources */,
 				0B2FE86F272731005E6A17BF /* Theme.swift in Sources */,
+				6F4C0EC660A3DC5C627C0AC4 /* TranslationLesson.swift in Sources */,
+				6EF13FD59119BAB281533752 /* TranslationLessonCard.swift in Sources */,
 				E0495C7F8744F99633CD2EF5 /* UsageCost.swift in Sources */,
 				7ADD51F051853BB04DC26A4D /* WindowImmersionBridge.swift in Sources */,
 				3197344EF97F73265170A114 /* WorkspaceView.swift in Sources */,
@@ -663,7 +671,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -678,7 +686,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.9.1;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -759,7 +767,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 13;
+				CURRENT_PROJECT_VERSION = 16;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -780,7 +788,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.8.0;
+				MARKETING_VERSION = 1.9.1;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

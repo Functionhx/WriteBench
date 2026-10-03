@@ -117,3 +117,10 @@ GPT-6 Astra/MAX completed a sample through the actual macOS Swift subprocess ser
 The ruled surface is a screen practice area, not an exact official answer-card reproduction. It never truncates a longer stored essay. The user can leave macOS full screen through system controls, but this never exposes another answer editor: the app remains in its minimal answering layout until hand-in or save-and-leave.
 
 No API key was supplied; paid DeepSeek grading and live Keychain storage remain untested. HTTP behavior is covered with injected fixtures. Vision's automated fixture uses printed text and does not establish handwriting accuracy. Local ad-hoc signing is used; App Store signing and notarization are not included.
+
+## 1.9.0 translation teaching and hand-in timing
+
+- 79 hosted macOS tests pass, including old report decoding, teaching persistence/export, source and vocabulary anchoring, synthesis score preservation, and pausing before missing-key checks with explicit resume.
+- Rendered the native SwiftUI teaching card with synthetic source/answer data and inspected its expanded vocabulary, techniques, translations, assembly notes and student advice. No user's report was modified for this check.
+- Recovered the original `com.chen.WriteBench.deepseek` Keychain item into the private local credential file without printing the credential. A read-only DeepSeek models request returned HTTP 401; the recovered credential therefore still needs replacement with a valid key. No paid grading call was made.
+- New teaching fields apply to newly generated English I/II reports; old saved reports remain readable and are not retroactively regenerated.

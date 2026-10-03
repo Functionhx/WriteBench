@@ -27,7 +27,9 @@ struct SettingsView: View {
     @State private var checkingCodex = false
     @State private var key = ""
     @State private var keyExists = false
-    @State private var rememberKey = false
+    @State private var keyVerified = false
+    @State private var rememberKey = true
+    @State private var savingKey = false
     @State private var status: String?
     @State private var failed = false
     @State private var testing = false
@@ -62,14 +64,14 @@ struct SettingsView: View {
                 codexCard
                 Card {
                     VStack(alignment: .leading, spacing: 18) {
-                        HStack { Label("DeepSeek API", systemImage: "key.horizontal").font(.system(size: 18, weight: .semibold)).labelStyle(BlueIconLabelStyle()); Spacer(); Label(keyExists ? "Key available" : "请填写 API Key", systemImage: keyExists ? "lock.fill" : "lock.open").font(.system(size: 11)).foregroundStyle(keyExists ? WB.green : WB.secondary) }
+                        HStack { Label("DeepSeek API", systemImage: "key.horizontal").font(.system(size: 18, weight: .semibold)).labelStyle(BlueIconLabelStyle()); Spacer(); Label(keyExists ? (keyVerified ? "Key 验证通过" : "Key 已读取 · 未验证") : "请填写 API Key", systemImage: keyExists ? "lock.fill" : "lock.open").font(.system(size: 11)).foregroundStyle(keyExists ? WB.green : WB.secondary) }
                         Text("API Key").font(.system(size: 12, weight: .medium))
                         HStack {
                             SecureField("Paste your DeepSeek API key", text: $key).textFieldStyle(.plain).padding(13).background(WB.canvas, in: RoundedRectangle(cornerRadius: 11)).overlay(RoundedRectangle(cornerRadius: 11).stroke(WB.line)).accessibilityIdentifier("apiKeyField")
-                            Button("使用此 Key") { saveKey() }.buttonStyle(PrimaryButtonStyle()).disabled(key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            Button("使用此 Key") { saveKey() }.buttonStyle(PrimaryButtonStyle()).disabled(savingKey || key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         }
-                        Toggle("在这台 Mac 上记住 Key（Keychain）", isOn: $rememberKey).font(.system(size: 12)).toggleStyle(.checkbox)
-                        Text("直接填写即可使用。默认只在本次运行中保留；无需输入 Mac 密码。").font(.system(size: 11)).foregroundStyle(WB.secondary)
+                        Toggle("在这台 Mac 上记住 Key", isOn: $rememberKey).font(.system(size: 12)).toggleStyle(.checkbox)
+                        Text("默认记住，重启和更新后自动读取。Key 保存为仅当前用户可读写的本机文件（非加密）；不包含在作文备份中。取消勾选则仅本次运行使用。").font(.system(size: 11)).foregroundStyle(WB.secondary)
                         HStack { Text("Model").font(.system(size: 12, weight: .medium)).frame(width: 70, alignment: .leading); TextField("Model ID", text: $model).textFieldStyle(.roundedBorder).frame(maxWidth: 340) }
                         Text("默认：\(DeepSeekClient.defaultModel) · MAX 思考。模型 ID 可修改，不会自动切换。").font(.system(size: 11)).foregroundStyle(WB.secondary)
                         HStack(spacing: 10) {
@@ -98,7 +100,7 @@ struct SettingsView: View {
                 if showsBackup { BackupCard() }
                 HStack(spacing: 10) { BrandMark(size: 24); Text("WriteBench \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "")").font(.system(size: 12, weight: .medium)); Text("Made for a more deliberate writing practice.").font(.system(size: 11)).foregroundStyle(WB.secondary) }.padding(.top, 4)
             }.frame(maxWidth: 860).padding(32).frame(maxWidth: .infinity, alignment: .leading)
-        }.task { await DeepSeekCredentials.restoreRememberedKey(); keyExists = DeepSeekCredentials.hasSessionKey }
+        }.task { await DeepSeekCredentials.restoreRememberedKey(); keyExists = DeepSeekCredentials.hasSessionKey; if let error = DeepSeekCredentials.restoreError { failed = true; status = error } }
     }
     private var providerCard: some View {
         Card {
@@ -162,26 +164,38 @@ struct SettingsView: View {
         HStack(alignment: .top, spacing: 20) { Text(title).font(.system(size: 12, weight: .medium)).frame(width: 110, alignment: .leading); Text(detail).font(.system(size: 12)).foregroundStyle(WB.secondary).lineSpacing(4) }
     }
     private func saveKey() {
-        let supplied = key
+        let supplied = key, remember = rememberKey
         do {
-            try DeepSeekCredentials.use(supplied, remember: rememberKey)
-            key = ""; keyExists = true; failed = false
-            status = "Key 已启用，仅保留在本次运行内存中。现在可以交卷。"
-            if rememberKey {
-                Task {
-                    do { try await DeepSeekCredentials.remember(supplied); status = "Key 已保存到 Keychain，可以交卷。" }
-                    catch { failed = true; status = "Key 已启用，但无法记住；本次仍可正常评卷，下次启动请重新填写。" }
+            try DeepSeekCredentials.use(supplied, remember: remember)
+            key = ""; keyExists = true; keyVerified = false; failed = false; savingKey = true
+            status = remember ? "Key 已启用，正在保存到本机…" : "正在移除以前保存的 Key…"
+            Task {
+                defer { savingKey = false }
+                do {
+                    if remember {
+                        try await DeepSeekCredentials.remember(supplied)
+                        status = "Key 已保存在本机，重启后自动读取。"
+                        testConnection()
+                    } else {
+                        try await DeepSeekCredentials.forget()
+                        try DeepSeekCredentials.use(supplied, remember: false)
+                        status = "Key 仅保留在本次运行内存中，以前保存的本机 Key 已移除。"
+                    }
+                } catch {
+                    failed = true
+                    status = "Key 本次仍可使用，但本机保存设置未完成：\(error.localizedDescription)"
                 }
             }
         } catch { showError(error) }
     }
     private func showError(_ error: Error) { failed = true; status = error.localizedDescription }
     private func testConnection() {
-        testing = true; status = nil
+        testing = true; keyVerified = false; status = nil
         Task {
             defer { testing = false }
             do {
                 let models = try await DeepSeekClient(apiKey: DeepSeekCredentials.load(), model: model).testConnection()
+                keyVerified = true
                 failed = false; status = models.contains(model) ? "连接成功，当前模型可用。" : "连接成功。账户可用模型：" + models.joined(separator: ", ")
             } catch { showError(error) }
         }
