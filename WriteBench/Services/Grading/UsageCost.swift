@@ -24,6 +24,7 @@ enum UsageCost {
     }
     static func cost(_ report: GradingReport, prices: Prices = .load()) -> Double? {
         let deepSeek = report.reviewers.filter { $0.provider == .deepSeek }.compactMap(\.usage)
+            + (report.synthesisProvider == .deepSeek ? [report.synthesisUsage].compactMap { $0 } : [])
         guard prices.isSet, !deepSeek.isEmpty else { return nil }
         return deepSeek.compactMap { cost($0, prices: prices) }.reduce(0, +)
     }

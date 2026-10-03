@@ -16,9 +16,6 @@ struct JudgeExecutionError: LocalizedError {
     let detail: String
     var errorDescription: String? { "\(judge.title)\n\(detail)" }
 }
-protocol ChiefExaminerService: Sendable {
-    func arbitrate(_ input: GradingInput, reviewers: [ReviewerResult]) async throws -> JudgeResponse
-}
 
 enum GradingError: LocalizedError {
     case invalidResponse(String), missingKey, missingRubric, http(Int), incomplete
@@ -43,7 +40,14 @@ enum ScoreAggregator {
         let spread = scores[scores.count - 1] - scores[0]
         let mode: GradingMode = judges.count == 1 ? .quick : .full
         let confidence: Confidence = mode == .quick ? .single : spread <= 1 ? .high : spread <= 2 ? .medium : .low
-        return GradingReport(reviewers: results.sorted { $0.judge.rawValue < $1.judge.rawValue }, finalScore: scores[scores.count / 2], spread: spread, confidence: confidence, rubricVersion: RubricLoader.version, promptVersion: GraderPrompt.version, isDemo: isDemo, timestamp: Date(), mode: mode)
+        var report = GradingReport(reviewers: results.sorted { $0.judge.rawValue < $1.judge.rawValue }, finalScore: scores[scores.count / 2], spread: spread, confidence: confidence, rubricVersion: RubricLoader.version, promptVersion: GraderPrompt.version, isDemo: isDemo, timestamp: Date(), mode: mode)
+        // English I translation is marked sentence by sentence: the total is the sum of per-sentence medians, less the median typo deduction.
+        if task == .kaoyanTranslation, mode == .full, results.allSatisfy({ !$0.response.segments.isEmpty }) {
+            let deductions = results.map { max(0, $0.response.segments.reduce(0) { $0 + $1.score } - $0.response.score) }.sorted()
+            let total = report.medianSegments.reduce(0) { $0 + $1.score } - deductions[deductions.count / 2]
+            report.finalScore = min(task.maxScore, max(0, total))
+        }
+        return report
     }
     /// English I translation totals are the sum of the five segment marks, less at most 0.5 for typos.
     static func reconcileSegments(_ response: inout JudgeResponse, task: WritingTask) {
@@ -64,8 +68,8 @@ enum ScoreAggregator {
 
 struct GradingCoordinator: Sendable {
     let service: any EssayGradingService
-    // Reserved for explicit opt-in arbitration. v1 never makes a hidden fourth paid call.
-    var chiefExaminer: (any ChiefExaminerService)? = nil
+    /// Optional chief examiner that turns three full reviews into one report. It never changes a mark.
+    var synthesizer: (any ReportSynthesizer)? = nil
     func grade(_ input: GradingInput, isDemo: Bool, judges: [Judge] = Judge.allCases, onProgress: @escaping @Sendable (GradingProgressEvent) async -> Void = { _ in }) async throws -> GradingReport {
         let started = Date()
         let results = try await withThrowingTaskGroup(of: ReviewerResult.self) { group in
@@ -100,6 +104,19 @@ struct GradingCoordinator: Sendable {
         }
         try Task.checkCancellation()
         var report = try ScoreAggregator.aggregate(results, task: input.task, isDemo: isDemo, judges: judges)
+        if report.gradingMode == .full, let synthesizer {
+            await onProgress(.summarizing)
+            do {
+                let result = try await synthesizer.synthesize(input, report: report)
+                try Task.checkCancellation()
+                report.synthesis = result.response; report.synthesisModel = result.model
+                report.synthesisProvider = result.provider; report.synthesisUsage = result.usage
+            } catch {
+                if Task.isCancelled || error is CancellationError { throw CancellationError() }
+                // The marks are complete; only the wording falls back to the local merge.
+                report.synthesisNote = "汇总未完成（\(error.localizedDescription)），以下为本机合并的三位评审意见。"
+            }
+        }
         report.duration = Date().timeIntervalSince(started)
         return report
     }

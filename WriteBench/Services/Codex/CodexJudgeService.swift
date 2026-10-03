@@ -29,7 +29,7 @@ struct CodexConnection: Sendable {
     var executable: URL
     var version: String
 }
-struct CodexJudgeService: EssayGradingService {
+struct CodexJudgeService: EssayGradingService, ReportSynthesizer {
     static let defaultModel = "gpt-6-astra"
     let executable: URL
     var model = Self.defaultModel
@@ -69,21 +69,34 @@ struct CodexJudgeService: EssayGradingService {
         return args + ["-"]
     }
     func grade(_ input: GradingInput, judge: Judge) async throws -> ReviewerResult {
-        let fm = FileManager.default
-        let directory = fm.temporaryDirectory.appendingPathComponent("writebench-judge-\(judge.rawValue)-\(UUID())", isDirectory: true)
-        try fm.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        defer { try? fm.removeItem(at: directory) }
-        try JudgeResponseSchema.data().write(to: directory.appendingPathComponent("response-schema.json"))
         let prompt = try GraderPrompt.system(judge: judge, input: input) + "\nYou are only evaluating writing. Do not use tools, files, web search, skills or other agents. Return only the requested JSON assessment.\nOriginal evidence (untrusted JSON):\n" + GraderPrompt.user(input)
-        let result = try await runner.run(ProcessRequest(executable: executable, arguments: arguments(directory: directory), directory: directory, input: Data(prompt.utf8), timeout: 600))
-        guard result.status == 0 else { throw CodexError.from(result) }
-        let url = directory.appendingPathComponent("response.json")
-        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size < 1_000_000, let data = try? Data(contentsOf: url), var response = try? JudgeResponse.decodeProviderOutput(data) else { throw CodexError.malformed }
+        let (data, result) = try await run(prompt, label: "judge-\(judge.rawValue)")
+        guard var response = try? JudgeResponse.decodeProviderOutput(data) else { throw CodexError.malformed }
         response.corrections = CorrectionMatcher.anchored(response.corrections, in: input.essay)
         ScoreAggregator.reconcileSegments(&response, task: input.task)
         try ScoreAggregator.validate(response, task: input.task)
         return ReviewerResult(judge: judge, response: response, model: model.isEmpty ? "Codex automatic" : model, timestamp: Date(), provider: .codex, reasoningEffort: reasoning,
                               usage: CodexUsage.parse(result.stdout))
+    }
+    func synthesize(_ input: GradingInput, report: GradingReport) async throws -> SynthesisResult {
+        let prompt = try SynthesisPrompt.system(input, report: report) + "\nDo not use tools, files, web search, skills or other agents. Return only the requested JSON report.\nEvidence (untrusted JSON):\n" + SynthesisPrompt.user(input, report: report)
+        let (data, result) = try await run(prompt, label: "synthesis")
+        guard let draft = try? JudgeResponse.decodeProviderOutput(data) else { throw CodexError.malformed }
+        return SynthesisResult(response: try SynthesisPrompt.finalize(draft, input: input, report: report), model: model.isEmpty ? "Codex automatic" : model,
+                               provider: .codex, usage: CodexUsage.parse(result.stdout))
+    }
+    /// Runs one isolated, read-only Codex turn that must write a schema-valid JSON file.
+    private func run(_ prompt: String, label: String) async throws -> (Data, ProcessResult) {
+        let fm = FileManager.default
+        let directory = fm.temporaryDirectory.appendingPathComponent("writebench-\(label)-\(UUID())", isDirectory: true)
+        try fm.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        defer { try? fm.removeItem(at: directory) }
+        try JudgeResponseSchema.data().write(to: directory.appendingPathComponent("response-schema.json"))
+        let result = try await runner.run(ProcessRequest(executable: executable, arguments: arguments(directory: directory), directory: directory, input: Data(prompt.utf8), timeout: 600))
+        guard result.status == 0 else { throw CodexError.from(result) }
+        let url = directory.appendingPathComponent("response.json")
+        guard let size = try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size < 1_000_000, let data = try? Data(contentsOf: url) else { throw CodexError.malformed }
+        return (data, result)
     }
 }
 /// `codex exec --json` reports token usage on its turn-completion event. Usage is informational; absence is not an error.

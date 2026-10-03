@@ -144,37 +144,63 @@ struct GradingReport: Codable, Sendable {
     var duration: Double? = nil
     var gradingMode: GradingMode { mode ?? .full }
     var usage: TokenUsage? {
-        let values = reviewers.compactMap(\.usage)
+        let values = reviewers.compactMap(\.usage) + [synthesisUsage].compactMap { $0 }
         return values.isEmpty ? nil : values.dropFirst().reduce(values[0], +)
     }
-    var corrections: [Correction] {
+    /// One consolidated report written by the chief examiner after the three independent reviews.
+    /// Scores inside it are the app's own aggregates; only the wording is synthesized.
+    var synthesis: JudgeResponse? = nil
+    var synthesisModel: String? = nil
+    var synthesisProvider: GradingProvider? = nil
+    var synthesisUsage: TokenUsage? = nil
+    /// Why the consolidated report is missing, when it was attempted and failed.
+    var synthesisNote: String? = nil
+
+    var corrections: [Correction] { (synthesis?.corrections ?? mergedCorrections).sorted { $0.severity == .major && $1.severity != .major } }
+    var mergedCorrections: [Correction] {
         var seen = Set<String>()
         return reviewers.flatMap(\.response.corrections).filter {
             seen.insert("\($0.category.rawValue)|\($0.original.lowercased().trimmingCharacters(in: .whitespacesAndNewlines))").inserted
-        }.sorted { $0.severity == .major && $1.severity != .major }
+        }
     }
-    /// The reviewer whose overall score is the median: its per-segment marks add up to the reported total.
+    /// The reviewer whose overall score is the median.
     var medianReviewer: ReviewerResult? { reviewers.min { abs($0.response.score - finalScore) < abs($1.response.score - finalScore) } }
-    /// Per-sentence marks from the median reviewer, with every reviewer's mark for the same sentence.
+    /// Final per-sentence marks: the median of the reviewers' marks for each numbered segment,
+    /// explained by a reviewer who gave exactly that mark.
+    var medianSegments: [SegmentScore] {
+        guard let first = reviewers.first(where: { !$0.response.segments.isEmpty }) else { return [] }
+        return first.response.segments.map { template in
+            let marks = reviewers.compactMap { reviewer in reviewer.response.segments.first { $0.number == template.number } }
+            let sorted = marks.map(\.score).sorted()
+            let median = sorted.isEmpty ? template.score : sorted[(sorted.count - 1) / 2]
+            var chosen = marks.first { $0.score == median } ?? template
+            chosen.score = median
+            return chosen
+        }
+    }
+    /// Per-sentence marks shown to the student, with each reviewer's own mark kept for reference.
     var segmentScores: [(segment: SegmentScore, byJudge: [(judge: Judge, score: Double)])] {
-        guard let source = medianReviewer, !source.response.segments.isEmpty else { return [] }
-        return source.response.segments.map { segment in
+        let segments = synthesis.map(\.segments).flatMap { $0.isEmpty ? nil : $0 } ?? medianSegments
+        return segments.map { segment in
             (segment, reviewers.compactMap { reviewer in reviewer.response.segments.first { $0.number == segment.number }.map { (reviewer.judge, $0.score) } })
         }
     }
     private var revisionSource: ReviewerResult? { reviewers.first(where: { $0.judge == .b }) ?? reviewers.first }
-    var improvedVersion: String { revisionSource?.response.improvedVersion ?? "" }
-    /// Expressions come from the reviewer whose improved version is shown, so each one appears in context.
+    var improvedVersion: String {
+        if let text = synthesis?.improvedVersion, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return text }
+        return revisionSource?.response.improvedVersion ?? ""
+    }
+    /// Expressions come from the version whose improved answer is shown, so each one appears in context.
     var expressions: [ExpressionSuggestion] {
         var seen = Set<String>()
-        return (revisionSource?.response.expressions ?? []).filter {
+        return (synthesis?.expressions ?? revisionSource?.response.expressions ?? []).filter {
             !$0.phrase.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && seen.insert($0.phrase.lowercased()).inserted
         }
     }
-    var conclusion: String { reviewers.min { abs($0.response.score - finalScore) < abs($1.response.score - finalScore) }?.response.summary ?? "" }
-    var strengths: [String] { uniqueFeedback(reviewers.flatMap(\.response.strengths)) }
-    var weaknesses: [String] { uniqueFeedback(reviewers.flatMap { $0.response.weaknesses.isEmpty ? $0.response.majorErrors : $0.response.weaknesses }) }
-    var improvements: [String] { uniqueFeedback(reviewers.flatMap(\.response.improvements)) }
+    var conclusion: String { synthesis?.summary ?? medianReviewer?.response.summary ?? "" }
+    var strengths: [String] { synthesis?.strengths ?? uniqueFeedback(reviewers.flatMap(\.response.strengths)) }
+    var weaknesses: [String] { synthesis?.weaknesses ?? uniqueFeedback(reviewers.flatMap { $0.response.weaknesses.isEmpty ? $0.response.majorErrors : $0.response.weaknesses }) }
+    var improvements: [String] { synthesis?.improvements ?? uniqueFeedback(reviewers.flatMap(\.response.improvements)) }
     private func uniqueFeedback(_ items: [String]) -> [String] {
         var seen = Set<String>()
         return items.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty && seen.insert($0.lowercased()).inserted }

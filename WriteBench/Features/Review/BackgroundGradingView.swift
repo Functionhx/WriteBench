@@ -57,7 +57,7 @@ struct GradingProgressView: View {
             }.padding(24)
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    Text(job.phase == .completed ? (job.isQuick ? "快速单评已完成，结论与分数已保存到历史。" : "三位独立评审已完成，完整结论与总分已保存到历史。") : job.phase == .failed || job.phase == .cancelled ? "本次未生成总分。已收到的评语片段不作为最终评分，提交原稿保留在下方。" : job.isQuick ? "快速单评：只请一位评审，速度更快、花费更少，没有评审一致性。" : "进度按实际完成的评审计数。下方为实时评语，总分将在三位评审全部完成后生成。").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                    Text(job.phase == .summarizing ? "三位评审已完成，正在把三份意见汇总成一份报告；分数已按中位数确定，汇总不改分。" : job.phase == .completed ? (job.isQuick ? "快速单评已完成，结论与分数已保存到历史。" : job.session?.report?.synthesis != nil ? "三位独立评审已完成，并已汇总成一份报告保存到历史。" : "三位独立评审已完成，完整结论与总分已保存到历史。") : job.phase == .failed || job.phase == .cancelled ? "本次未生成总分。已收到的评语片段不作为最终评分，提交原稿保留在下方。" : job.isQuick ? "快速单评：只请一位评审，速度更快、花费更少，没有评审一致性。" : "进度按实际完成的评审计数。下方为实时评语，总分将在三位评审全部完成后生成。").font(.system(size: 12)).foregroundStyle(WB.secondary)
                     ForEach(job.activeJudges) { judge in
                         Card(padding: 20) {
                             VStack(alignment: .leading, spacing: 12) {

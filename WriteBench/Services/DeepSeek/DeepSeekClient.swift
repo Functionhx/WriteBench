@@ -33,25 +33,29 @@ struct URLSessionTransport: StreamingHTTPTransport {
     }
 }
 
-struct DeepSeekClient: StreamingEssayGradingService {
+struct DeepSeekClient: StreamingEssayGradingService, ReportSynthesizer {
     static let defaultModel = "deepseek-v4-pro"
     let apiKey: String
     let model: String
     var transport: any HTTPTransport = URLSessionTransport()
     func grade(_ input: GradingInput, judge: Judge, onPreview: @escaping @Sendable (String) async -> Void) async throws -> ReviewerResult {
+        let finished = try await complete(system: GraderPrompt.system(judge: judge, input: input), user: try GraderPrompt.user(input), onPreview: onPreview)
+        return try decodedResult(finished.content, model: finished.model, usage: finished.usage, input: input, judge: judge)
+    }
+    /// One complete, untruncated chat completion. Partial or interrupted output is rejected.
+    func complete(system: String, user: String, onPreview: @escaping @Sendable (String) async -> Void = { _ in }) async throws -> (content: String, model: String, usage: TokenUsage?) {
         guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw GradingError.missingKey }
         var request = URLRequest(url: URL(string: "https://api.deepseek.com/chat/completions")!)
         request.httpMethod = "POST"
         request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        let payload = ChatRequest(model: model, messages: [Message(role: "system", content: GraderPrompt.system(judge: judge, input: input)), Message(role: "user", content: try GraderPrompt.user(input))], stream: transport is any StreamingHTTPTransport)
+        let payload = ChatRequest(model: model, messages: [Message(role: "system", content: system), Message(role: "user", content: user)], stream: transport is any StreamingHTTPTransport)
         request.httpBody = try JSONEncoder().encode(payload)
         if let streaming = transport as? any StreamingHTTPTransport {
             let accumulator = DeepSeekStreamAccumulator()
             try await streaming.stream(for: request) { event in try await accumulator.consume(event, onPreview: onPreview) }
             try Task.checkCancellation()
-            let finished = try await accumulator.completed()
-            return try decodedResult(finished.content, model: finished.model, usage: finished.usage, input: input, judge: judge)
+            return try await accumulator.completed()
         }
         let (data, response) = try await transport.data(for: request)
         try Task.checkCancellation()
@@ -61,7 +65,7 @@ struct DeepSeekClient: StreamingEssayGradingService {
         do { completion = try JSONDecoder().decode(ChatCompletion.self, from: data) }
         catch { throw GradingError.invalidResponse("无法读取 API 响应") }
         guard let choice = completion.choices.first, choice.finish_reason == "stop", let content = choice.message.content, !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { throw GradingError.invalidResponse("评审输出为空或被截断") }
-        return try decodedResult(content, model: completion.model, usage: completion.usage?.tokenUsage, input: input, judge: judge)
+        return (content, completion.model, completion.usage?.tokenUsage)
     }
     private func decodedResult(_ content: String, model: String, usage: TokenUsage?, input: GradingInput, judge: Judge) throws -> ReviewerResult {
         var result: JudgeResponse
@@ -71,6 +75,13 @@ struct DeepSeekClient: StreamingEssayGradingService {
         ScoreAggregator.reconcileSegments(&result, task: input.task)
         try ScoreAggregator.validate(result, task: input.task)
         return ReviewerResult(judge: judge, response: result, model: model, timestamp: Date(), provider: .deepSeek, reasoningEffort: "max", usage: usage)
+    }
+    func synthesize(_ input: GradingInput, report: GradingReport) async throws -> SynthesisResult {
+        let finished = try await complete(system: SynthesisPrompt.system(input, report: report), user: try SynthesisPrompt.user(input, report: report))
+        let draft: JudgeResponse
+        do { draft = try JudgeResponse.decodeProviderOutput(Data(finished.content.utf8)) }
+        catch { throw GradingError.invalidResponse("汇总报告 JSON 字段缺失或类型不符") }
+        return SynthesisResult(response: try SynthesisPrompt.finalize(draft, input: input, report: report), model: finished.model, provider: .deepSeek, usage: finished.usage)
     }
     func testConnection() async throws -> [String] {
         var request = URLRequest(url: URL(string: "https://api.deepseek.com/models")!)

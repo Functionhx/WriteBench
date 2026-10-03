@@ -331,3 +331,60 @@ private func segments(_ scores: [Double]) -> [SegmentScore] {
     let schema = try #require(JSONSerialization.jsonObject(with: JudgeResponseSchema.data()) as? [String: Any])
     #expect((schema["required"] as? [String])?.contains("segments") == true)
 }
+
+// MARK: One consolidated report
+
+private actor ScriptedSynthesizer: ReportSynthesizer {
+    let fail: Bool
+    var calls = 0
+    init(fail: Bool = false) { self.fail = fail }
+    func synthesize(_ input: GradingInput, report: GradingReport) async throws -> SynthesisResult {
+        calls += 1
+        if fail { throw GradingError.http(503) }
+        var draft = judgeResponse(1, corrections: [Correction(original: "look forward to  hear", corrected: "look forward to hearing", category: .grammar, severity: .major, explanation: "动名词。"),
+                                                   Correction(original: "invented span", corrected: "x", category: .grammar, severity: .minor, explanation: "x")])
+        draft.summary = "汇总结论"; draft.strengths = ["合并后的优点"]; draft.improvedVersion = "Consolidated version."
+        return SynthesisResult(response: try SynthesisPrompt.finalize(draft, input: input, report: report), model: "chief", provider: .deepSeek, usage: TokenUsage(input: 10, cachedInput: 0, output: 5, reasoning: nil))
+    }
+}
+private actor ScoreGrader: EssayGradingService {
+    let scores: [Judge: Double]
+    init(_ scores: [Judge: Double]) { self.scores = scores }
+    func grade(_ input: GradingInput, judge: Judge) async throws -> ReviewerResult {
+        ReviewerResult(judge: judge, response: judgeResponse(scores[judge] ?? 7), model: "test", timestamp: Date())
+    }
+}
+@Test func threeReviewsBecomeOneReportWithoutChangingTheMarks() async throws {
+    let input = GradingInput(task: .kaoyanSmall, question: "Invite Alex.", essay: essay, rubric: "Test")
+    let synthesizer = ScriptedSynthesizer()
+    let report = try await GradingCoordinator(service: ScoreGrader([.a: 6, .b: 7.5, .c: 8]), synthesizer: synthesizer).grade(input, isDemo: false)
+    #expect(await synthesizer.calls == 1)
+    #expect(report.finalScore == 7.5 && report.synthesis?.score == 7.5 && report.synthesis?.language == report.dimension(\.language))
+    #expect(report.conclusion == "汇总结论" && report.strengths == ["合并后的优点"] && report.improvedVersion == "Consolidated version.")
+    #expect(report.corrections.map(\.original) == ["look forward to hear"])
+    #expect(report.usage?.input == 10 && report.synthesisProvider == .deepSeek)
+    let quick = try await GradingCoordinator(service: ScoreGrader([:]), synthesizer: synthesizer).grade(input, isDemo: false, judges: [.b])
+    let callsAfterQuick = await synthesizer.calls
+    #expect(quick.synthesis == nil && callsAfterQuick == 1)
+}
+@Test func failedSynthesisKeepsTheLocalMergeAndExplains() async throws {
+    let input = GradingInput(task: .kaoyanSmall, question: "Invite Alex.", essay: essay, rubric: "Test")
+    let report = try await GradingCoordinator(service: ScoreGrader([.a: 6, .b: 7.5, .c: 8]), synthesizer: ScriptedSynthesizer(fail: true)).grade(input, isDemo: false)
+    #expect(report.synthesis == nil && report.finalScore == 7.5 && report.synthesisNote?.contains("汇总未完成") == true)
+    #expect(report.conclusion == "Clear invitation.")
+    let decoded = try JSONDecoder().decode(GradingReport.self, from: JSONEncoder().encode(report))
+    #expect(decoded.synthesisNote == report.synthesisNote)
+}
+@Test func englishOneTranslationTotalIsTheSumOfSentenceMedians() throws {
+    let marks: [[Double]] = [[2, 2, 2, 1, 1], [1, 1, 1, 2, 2], [1.5, 1.5, 1.5, 1.5, 1.5]]
+    let reviewers = zip(Judge.allCases, marks).map { judge, marks -> ReviewerResult in
+        var response = judgeResponse(marks.reduce(0, +)); response.segments = segments(marks)
+        return ReviewerResult(judge: judge, response: response, model: "test", timestamp: Date())
+    }
+    let report = try ScoreAggregator.aggregate(reviewers, task: .kaoyanTranslation, isDemo: false)
+    #expect(report.medianSegments.map(\.score) == [1.5, 1.5, 1.5, 1.5, 1.5])
+    #expect(report.finalScore == 7.5)
+    #expect(report.segmentScores.allSatisfy { $0.byJudge.count == 3 })
+    let prompt = SynthesisPrompt.system(GradingInput(task: .kaoyanTranslation, question: "Q", essay: "答", rubric: "r"), report: report)
+    #expect(prompt.contains("(46) 1.5/2.0") && prompt.contains("Do not mention examiners"))
+}

@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum ReviewSection: String, CaseIterable, Identifiable {
-    case overview, progress, segments, feedback, examiners, corrections, improved, rewrite
+    case overview, progress, segments, feedback, corrections, improved, rewrite, examiners
     var id: String { rawValue }
     func title(isTranslation: Bool) -> String {
         switch self {
@@ -9,7 +9,7 @@ enum ReviewSection: String, CaseIterable, Identifiable {
         case .progress: "与上一稿对比"
         case .segments: "逐句得分"
         case .feedback: "优点与不足"
-        case .examiners: "评审意见"
+        case .examiners: "原始评审意见"
         case .corrections: "逐句修改"
         case .improved: isTranslation ? "参考改译" : "改进作文"
         case .rewrite: "重写"
