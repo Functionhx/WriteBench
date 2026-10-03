@@ -69,22 +69,49 @@ struct ImmersiveWritingView: View {
         }.padding(.leading, 8).padding(.trailing, 28)
     }
     private var answer: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                Text(store.task.exam == .ielts ? "Answer" : "答题区").font(.system(size: 12, weight: .medium)).foregroundStyle(WB.secondary)
+        let sheet = store.task.answerSheet
+        return VStack(alignment: .leading, spacing: sheet == nil ? 16 : 8) {
+            HStack(alignment: .firstTextBaseline) {
+                if let sheet {
+                    Text(sheet.section).font(.system(size: 12, weight: .medium)).foregroundStyle(WB.ink)
+                } else {
+                    Text(store.task.exam == .ielts ? "Answer" : "答题区").font(.system(size: 12, weight: .medium)).foregroundStyle(WB.secondary)
+                }
                 Spacer()
                 if showLiveWordCount { Text(store.task.targetLanguage == "Simplified Chinese" ? "\(store.essay.count) 字符" : "\(store.words) words").font(.system(size: 12)).monospacedDigit().foregroundStyle(WB.secondary).accessibilityIdentifier("liveWordCount") }
+                if let sheet { Text(sheet.sheet).font(.system(size: 11)).foregroundStyle(AnswerSheet.magenta) }
             }
             PlainTextEditor(text: $store.essay, fontSize: editorFontSize, fontStyle: editorFont, editable: true, identifier: "essayEditor",
-                            ruled: editorRuled && store.task.exam != .ielts, requestFocus: true)
+                            ruled: sheet != nil || (editorRuled && store.task.exam != .ielts), sheetNumber: sheet?.number, requestFocus: true)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .overlay(Rectangle().stroke(Color.black.opacity(0.12), lineWidth: 0.75))
+                .overlay(Rectangle().stroke(sheet == nil ? Color.black.opacity(0.12) : Color.black.opacity(0.85), lineWidth: sheet == nil ? 0.75 : 1.2))
+                .padding(sheet == nil ? 0 : 14)
+                .overlay { if sheet != nil { AnswerSheet.CornerMarks() } }
             HStack {
+                if sheet != nil {
+                    Text("请在答题区域内作答，超出黑色矩形边框限定区域的答案无效").font(.system(size: 10)).foregroundStyle(AnswerSheet.magenta.opacity(0.85))
+                    Text("·").foregroundStyle(WB.secondary.opacity(0.5))
+                }
                 Text(store.saveStatus).font(.system(size: 10)).foregroundStyle(WB.secondary.opacity(0.7))
                 Spacer()
                 Button("导入手写稿", action: onImport).buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(WB.secondary).disabled(store.isGrading || isRecognizing).accessibilityIdentifier("importHandwritten")
             }
         }.padding(.leading, 28).padding(.trailing, 8)
+    }
+}
+/// Visual cues from the printed 考研 answer sheet.
+enum AnswerSheet {
+    static let magenta = Color(red: 0.86, green: 0.27, blue: 0.52)
+    /// Solid registration squares at the sheet's corners.
+    struct CornerMarks: View {
+        var body: some View {
+            VStack {
+                HStack { mark; Spacer(); mark }
+                Spacer()
+                HStack { mark; Spacer(); mark }
+            }.allowsHitTesting(false).accessibilityHidden(true)
+        }
+        private var mark: some View { Rectangle().fill(Color.black.opacity(0.85)).frame(width: 8, height: 8) }
     }
 }
 private struct ExamSubmitStyle: ButtonStyle {

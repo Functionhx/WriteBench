@@ -18,6 +18,18 @@ enum WritingTask: String, CaseIterable, Identifiable, Codable, Sendable {
     var title: String {
         switch self { case .kaoyanSmall: "英一小作文"; case .kaoyanLarge: "英一大作文"; case .kaoyan2Small: "英二小作文"; case .kaoyan2Large: "英二大作文"; case .cet6Writing: "Writing"; case .ieltsTask1: "Task 1"; case .ieltsTask2: "Task 2"; case .kaoyanTranslation: "英一翻译"; case .kaoyan2Translation: "英二翻译"; case .cet6Translation: "翻译" }
     }
+    /// How the 考研 answer sheet 2 labels this task: section heading, printed question number and sheet title.
+    var answerSheet: (section: String, number: String, sheet: String)? {
+        switch self {
+        case .kaoyanTranslation: ("第二部分：阅读理解 C 节", "46–50", "英语（一）答题卡 2")
+        case .kaoyanSmall: ("第三部分：写作 A 节", "51.", "英语（一）答题卡 2")
+        case .kaoyanLarge: ("第三部分：写作 B 节", "52.", "英语（一）答题卡 2")
+        case .kaoyan2Translation: ("第三部分：英译汉", "46.", "英语（二）答题卡 2")
+        case .kaoyan2Small: ("第四部分：写作 A 节", "47.", "英语（二）答题卡 2")
+        case .kaoyan2Large: ("第四部分：写作 B 节", "48.", "英语（二）答题卡 2")
+        default: nil
+        }
+    }
     var isTranslation: Bool { self == .kaoyanTranslation || self == .kaoyan2Translation || self == .cet6Translation }
     var targetLanguage: String { (self == .kaoyanTranslation || self == .kaoyan2Translation) ? "Simplified Chinese" : "English" }
     var fullTitle: String { "\(exam.title) · \(title)" }
