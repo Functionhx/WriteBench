@@ -149,7 +149,10 @@ enum WritingStage { case preparation, answering }
                         detail: "\(judges) · ChatGPT via Codex\n\(error.localizedDescription)\n尚未发起评卷，请在设置中检查连接。")
                 }
             }
-            let synthesizer: (any ReportSynthesizer)? = configuration.synthesize && configuration.mode == .full ? (selectedDeepSeek ?? codex) : nil
+            var synthesizer: (any ReportSynthesizer)?
+            if configuration.synthesize, configuration.mode == .full {
+                if let selectedDeepSeek { synthesizer = selectedDeepSeek } else if let codex { synthesizer = codex }
+            }
             return (ProviderRouter(configuration: configuration, deepSeek: selectedDeepSeek, codex: codex), synthesizer)
         }
     }
