@@ -5,28 +5,28 @@ enum Exam: String, CaseIterable, Identifiable, Codable, Sendable {
     var id: String { rawValue }
     var title: String { switch self { case .kaoyan: "考研英语"; case .cet6: "CET-6 六级"; case .ielts: "IELTS 雅思" } }
     var symbol: String { switch self { case .kaoyan: "graduationcap"; case .cet6: "book"; case .ielts: "globe" } }
-    var detail: String { switch self { case .kaoyan: "英语一写作 · 英语一 / 二翻译"; case .cet6: "写作 / 翻译"; case .ielts: "Academic · Task 1 / Task 2" } }
+    var detail: String { switch self { case .kaoyan: "英语一 / 二 · 大小作文与翻译"; case .cet6: "写作 / 翻译"; case .ielts: "Academic · Task 1 / Task 2" } }
     var tasks: [WritingTask] { WritingTask.allCases.filter { $0.exam == self } }
 }
 
 enum WritingTask: String, CaseIterable, Identifiable, Codable, Sendable {
-    case kaoyanSmall, kaoyanLarge, kaoyanTranslation, kaoyan2Translation, cet6Writing, cet6Translation, ieltsTask1, ieltsTask2
+    case kaoyanSmall, kaoyanLarge, kaoyan2Small, kaoyan2Large, kaoyanTranslation, kaoyan2Translation, cet6Writing, cet6Translation, ieltsTask1, ieltsTask2
     var id: String { rawValue }
     var exam: Exam {
-        switch self { case .kaoyanSmall, .kaoyanLarge, .kaoyanTranslation, .kaoyan2Translation: .kaoyan; case .cet6Writing, .cet6Translation: .cet6; case .ieltsTask1, .ieltsTask2: .ielts }
+        switch self { case .kaoyanSmall, .kaoyanLarge, .kaoyan2Small, .kaoyan2Large, .kaoyanTranslation, .kaoyan2Translation: .kaoyan; case .cet6Writing, .cet6Translation: .cet6; case .ieltsTask1, .ieltsTask2: .ielts }
     }
     var title: String {
-        switch self { case .kaoyanSmall: "小作文"; case .kaoyanLarge: "大作文"; case .cet6Writing: "Writing"; case .ieltsTask1: "Task 1"; case .ieltsTask2: "Task 2"; case .kaoyanTranslation: "英语一翻译"; case .kaoyan2Translation: "英语二翻译"; case .cet6Translation: "翻译" }
+        switch self { case .kaoyanSmall: "英一小作文"; case .kaoyanLarge: "英一大作文"; case .kaoyan2Small: "英二小作文"; case .kaoyan2Large: "英二大作文"; case .cet6Writing: "Writing"; case .ieltsTask1: "Task 1"; case .ieltsTask2: "Task 2"; case .kaoyanTranslation: "英一翻译"; case .kaoyan2Translation: "英二翻译"; case .cet6Translation: "翻译" }
     }
     var isTranslation: Bool { self == .kaoyanTranslation || self == .kaoyan2Translation || self == .cet6Translation }
     var targetLanguage: String { (self == .kaoyanTranslation || self == .kaoyan2Translation) ? "Simplified Chinese" : "English" }
     var fullTitle: String { "\(exam.title) · \(title)" }
-    var maxScore: Double { switch self { case .kaoyanSmall, .kaoyanTranslation: 10; case .kaoyanLarge: 20; case .cet6Writing, .cet6Translation, .kaoyan2Translation: 15; case .ieltsTask1, .ieltsTask2: 9 } }
-    var targetWords: Int { switch self { case .kaoyanSmall: 100; case .kaoyanLarge: 200; case .cet6Writing: 180; case .ieltsTask1: 150; case .ieltsTask2: 250; case .kaoyanTranslation, .kaoyan2Translation, .cet6Translation: 0 } }
-    var wordGuidance: String { switch self { case .kaoyanSmall: "About 100 words"; case .kaoyanLarge: "160–200 words"; case .cet6Writing: "150–200 words"; case .ieltsTask1: "At least 150 words"; case .ieltsTask2: "At least 250 words"; case .kaoyanTranslation: "英语一 · 英译汉 · 完整翻译指定句子"; case .kaoyan2Translation: "英语二 · 英译汉 · 完整翻译段落"; case .cet6Translation: "汉译英 · 完整翻译原文" } }
-    var suggestedMinutes: Int { switch self { case .kaoyanSmall: 15; case .kaoyanTranslation, .kaoyan2Translation: 20; case .kaoyanLarge, .cet6Writing, .cet6Translation: 30; case .ieltsTask1: 20; case .ieltsTask2: 40 } }
+    var maxScore: Double { switch self { case .kaoyanSmall, .kaoyan2Small, .kaoyanTranslation: 10; case .kaoyanLarge: 20; case .kaoyan2Large, .cet6Writing, .cet6Translation, .kaoyan2Translation: 15; case .ieltsTask1, .ieltsTask2: 9 } }
+    var targetWords: Int { switch self { case .kaoyanSmall, .kaoyan2Small: 100; case .kaoyanLarge: 200; case .kaoyan2Large: 150; case .cet6Writing: 180; case .ieltsTask1: 150; case .ieltsTask2: 250; case .kaoyanTranslation, .kaoyan2Translation, .cet6Translation: 0 } }
+    var wordGuidance: String { switch self { case .kaoyanSmall, .kaoyan2Small: "About 100 words"; case .kaoyanLarge: "160–200 words"; case .kaoyan2Large: "About 150 words"; case .cet6Writing: "150–200 words"; case .ieltsTask1: "At least 150 words"; case .ieltsTask2: "At least 250 words"; case .kaoyanTranslation: "英语一 · 英译汉 · 完整翻译指定句子"; case .kaoyan2Translation: "英语二 · 英译汉 · 完整翻译段落"; case .cet6Translation: "汉译英 · 完整翻译原文" } }
+    var suggestedMinutes: Int { switch self { case .kaoyanSmall, .kaoyan2Small: 15; case .kaoyan2Large: 30; case .kaoyanTranslation, .kaoyan2Translation: 20; case .kaoyanLarge, .cet6Writing, .cet6Translation: 30; case .ieltsTask1: 20; case .ieltsTask2: 40 } }
     var rubricFile: String {
-        switch self { case .kaoyanSmall: "kaoyan_english1_small"; case .kaoyanLarge: "kaoyan_english1_large"; case .cet6Writing: "cet6_writing"; case .ieltsTask1: "ielts_task1"; case .ieltsTask2: "ielts_task2"; case .kaoyanTranslation: "kaoyan_english1_translation"; case .kaoyan2Translation: "kaoyan_english2_translation"; case .cet6Translation: "cet6_translation" }
+        switch self { case .kaoyanSmall: "kaoyan_english1_small"; case .kaoyanLarge: "kaoyan_english1_large"; case .kaoyan2Small: "kaoyan_english2_small"; case .kaoyan2Large: "kaoyan_english2_large"; case .cet6Writing: "cet6_writing"; case .ieltsTask1: "ielts_task1"; case .ieltsTask2: "ielts_task2"; case .kaoyanTranslation: "kaoyan_english1_translation"; case .kaoyan2Translation: "kaoyan_english2_translation"; case .cet6Translation: "cet6_translation" }
     }
     var sampleQuestion: String {
         switch self {
@@ -34,6 +34,10 @@ enum WritingTask: String, CaseIterable, Identifiable, Codable, Sendable {
             "You are organising a lecture on Chinese culture at your university. Write a letter to your foreign friend Alex, inviting them to attend. Include the following details:\n1. The time and place\n2. The topic of the lecture\n3. Why you think they would enjoy it\nWrite about 100 words. Use “Li Ming” instead of your own name."
         case .kaoyanLarge:
             "A drawing shows two students approaching the same mountain. One looks only at its height; the other starts climbing one step at a time. Write an essay in which you describe the drawing, interpret its message, and give your comments. Write 160–200 words."
+        case .kaoyan2Small:
+            "Suppose your university is organising a weekend volunteer trip to a rural primary school. Write an email to Jack, an international student, to\n1) invite him to join the trip, and\n2) tell him about the arrangements.\nWrite your answer in about 100 words.\nDo not use your own name in your email. Use “Li Ming” instead."
+        case .kaoyan2Large:
+            "Write an essay based on the chart below. In your essay, you should\n1) describe and interpret the chart, and\n2) give your comments.\nWrite your answer in about 150 words.\n\n【图表数据】某高校学生每周课外阅读时长调查（2020 年与 2024 年，占受访学生比例）\n少于 1 小时：2020 年 42%，2024 年 28%\n1–3 小时：2020 年 38%，2024 年 41%\n3 小时以上：2020 年 20%，2024 年 31%"
         case .cet6Writing:
             "For this part, you are allowed 30 minutes to write an essay on the importance of developing independent thinking at university. Support your view with reasons and examples. Write at least 150 words but no more than 200 words."
         case .ieltsTask1:

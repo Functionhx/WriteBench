@@ -12,6 +12,7 @@ struct WritingView: View {
     @State private var ocrTask: Task<Void, Never>?
     @State private var editingQuestion = false
     @State private var importingText = false
+    @State private var showQuestionImage = true
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
     var body: some View {
         Group {
@@ -109,7 +110,7 @@ struct WritingView: View {
                 Text(store.question).font(.system(size: 16)).lineSpacing(7).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
             }
             if let data = store.questionImage, let image = NSImage(data: data) {
-                DisclosureGroup("题目原图") { Image(nsImage: image).resizable().scaledToFit().frame(maxHeight: 230).padding(.top, 8) }.font(.system(size: 12)).foregroundStyle(WB.secondary)
+                DisclosureGroup("题目配图", isExpanded: $showQuestionImage) { Image(nsImage: image).resizable().scaledToFit().frame(maxHeight: 320).padding(.top, 8) }.font(.system(size: 12)).foregroundStyle(WB.secondary)
             }
             HStack {
                 Text(store.task.fullTitle).font(.system(size: 11)).foregroundStyle(WB.secondary)

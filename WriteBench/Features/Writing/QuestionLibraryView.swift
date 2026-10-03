@@ -93,6 +93,7 @@ struct QuestionLibraryView: View {
                     HStack(spacing: 8) {
                         Text(item.title).font(.system(size: 14, weight: .semibold))
                         if let year = item.year { Text(String(year)).font(.system(size: 11)).foregroundStyle(WB.blue) }
+                        if item.image != nil { Label("配图", systemImage: "photo").font(.system(size: 11)).foregroundStyle(WB.secondary) }
                         if !item.label.isEmpty { Text(item.label).font(.system(size: 11)).foregroundStyle(WB.secondary).padding(.horizontal, 6).padding(.vertical, 2).background(WB.tint, in: Capsule()) }
                         Spacer()
                         if let latest = attempts.last {
