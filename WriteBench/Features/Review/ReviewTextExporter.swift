@@ -6,7 +6,7 @@ import Foundation
         guard let report = session.report else { return nil }
         var sections = [
             "WriteBench · \(session.task.fullTitle)\n\(session.date.formatted(date: .abbreviated, time: .shortened))",
-            "\(report.isDemo ? "演示评分 · " : "")最终得分：\(report.finalScore.scoreText) / \(Int(session.task.maxScore))\n置信度：\(report.confidence.rawValue)\n评审分差：\(report.spread.scoreText)",
+            "\(report.isDemo ? "演示评分 · " : "")最终得分：\(report.finalScore.scoreText) / \(Int(session.task.maxScore))\n" + (report.gradingMode == .quick ? "评阅方式：快速单评（一位评审）" : "置信度：\(report.confidence.rawValue)\n评审分差：\(report.spread.scoreText)"),
             "评阅结论（中位分评审）\n\(report.conclusion)",
             feedback("写得好的地方", report.strengths),
             feedback("不足的地方", report.weaknesses),
@@ -20,7 +20,7 @@ import Foundation
             if !result.response.minorErrors.isEmpty { lines.append(feedback("次要问题", result.response.minorErrors)) }
             return lines.joined(separator: "\n")
         }
-        sections.append("三位评审的独立意见\n\n" + reviewers.joined(separator: "\n\n"))
+        sections.append((report.gradingMode == .quick ? "评审意见" : "三位评审的独立意见") + "\n\n" + reviewers.joined(separator: "\n\n"))
         let corrections = report.corrections.enumerated().map { index, correction in
             "\(index + 1). \(correction.category.rawValue) · \(correction.severity == .major ? "主要" : "次要")\n原句：\(correction.original)\n修改：\(correction.corrected)\n说明：\(correction.explanation)"
         }

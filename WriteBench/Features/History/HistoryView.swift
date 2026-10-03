@@ -147,8 +147,14 @@ struct HistoryView: View {
                             Text(session.date.formatted(date: .abbreviated, time: .shortened))
                                 .font(.system(size: 11)).foregroundStyle(WB.secondary)
                         }.frame(maxWidth: .infinity, alignment: .leading)
-                        Text("\(session.finalScore.scoreText) / \(Int(session.task.maxScore))")
-                            .font(.system(size: 13, weight: .medium)).foregroundStyle(WB.blue).frame(width: 120)
+                        HStack(spacing: 6) {
+                            Text("\(session.finalScore.scoreText) / \(Int(session.task.maxScore))").font(.system(size: 13, weight: .medium)).foregroundStyle(WB.blue)
+                            if let previous = baseline(of: session, index: index, in: group) {
+                                let delta = session.finalScore - previous.finalScore
+                                Text(RevisionComparisonCard.signed(delta)).font(.system(size: 11, weight: .medium)).foregroundStyle(RevisionComparisonCard.color(delta))
+                                    .help("相比第 \((group.versions.firstIndex { $0.id == previous.id } ?? 0) + 1) 稿")
+                            }
+                        }.frame(width: 120)
                         confidence(session).frame(width: 66)
                         Image(systemName: "chevron.right").font(.system(size: 10)).foregroundStyle(WB.secondary).frame(width: 10)
                     }.padding(.vertical, 15).padding(.leading, 64).padding(.trailing, 60)
@@ -157,7 +163,12 @@ struct HistoryView: View {
             }
         }
     }
+    /// The recorded parent, or the previous attempt for legacy records.
+    private func baseline(of session: EssaySession, index: Int, in group: EssayHistoryGroup) -> EssaySession? {
+        if let parent = session.parentSessionID, let found = group.versions.first(where: { $0.id == parent && $0.id != session.id }) { return found }
+        return index > 0 ? group.versions[index - 1] : nil
+    }
     private func confidence(_ session: EssaySession) -> some View {
-        Text(session.confidence).font(.system(size: 12)).foregroundStyle(session.confidence == "Low" ? WB.amber : WB.green)
+        Text(Confidence.label(session.confidence)).font(.system(size: 12)).foregroundStyle(session.confidence == "Low" ? WB.amber : WB.green)
     }
 }

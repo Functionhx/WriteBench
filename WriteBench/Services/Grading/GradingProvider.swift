@@ -19,9 +19,13 @@ struct GradingConfiguration: Sendable {
     var codexModel = CodexJudgeService.defaultModel
     var codexReasoning = "max"
     var codexPath = ""
+    var quickJudge: Judge = .b
+    var mode: GradingMode = .full
     func provider(for judge: Judge) -> GradingProvider { switch judge { case .a: a; case .b: b; case .c: c } }
-    var requiresDeepSeek: Bool { Judge.allCases.contains { provider(for: $0) == .deepSeek } }
-    var requiresCodex: Bool { Judge.allCases.contains { provider(for: $0) == .codex } }
+    var judges: [Judge] { mode == .quick ? [quickJudge] : Judge.allCases }
+    var requiresDeepSeek: Bool { judges.contains { provider(for: $0) == .deepSeek } }
+    var requiresCodex: Bool { judges.contains { provider(for: $0) == .codex } }
+    func with(_ mode: GradingMode) -> Self { var copy = self; copy.mode = mode; return copy }
     @MainActor static func load(_ defaults: UserDefaults = .standard) -> Self {
         Self(a: GradingProvider(rawValue: defaults.string(forKey: "judgeProviderA") ?? "") ?? .deepSeek,
              b: GradingProvider(rawValue: defaults.string(forKey: "judgeProviderB") ?? "") ?? .deepSeek,
@@ -29,7 +33,8 @@ struct GradingConfiguration: Sendable {
              deepSeekModel: defaults.string(forKey: "deepSeekModel") ?? DeepSeekClient.defaultModel,
              codexModel: defaults.string(forKey: "codexModel") ?? CodexJudgeService.defaultModel,
              codexReasoning: defaults.string(forKey: "codexReasoning") ?? "max",
-             codexPath: defaults.string(forKey: "codexExecutablePath") ?? "")
+             codexPath: defaults.string(forKey: "codexExecutablePath") ?? "",
+             quickJudge: Judge(rawValue: defaults.string(forKey: "quickJudge") ?? "") ?? .b)
     }
 }
 struct ProviderRouter: StreamingEssayGradingService {

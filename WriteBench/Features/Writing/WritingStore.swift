@@ -28,15 +28,21 @@ enum WritingStage { case preparation, answering }
     private var lastTick = Date()
     private var lastPersist = Date()
     private var rewriteSessionID: UUID?
+    /// Increments each time a running answer crosses the exam time limit.
+    private(set) var timeUpCount = 0
     var words: Int { WordCounter.count(essay) }
-    var timerText: String { let t = Int(elapsed); return String(format: "%02d:%02d", t / 60, t % 60) }
+    var timerText: String { Self.clock(elapsed) }
+    /// The exam's suggested time, when the exam time limit setting is on.
+    var timeLimit: TimeInterval? { UserDefaults.standard.bool(forKey: "examTimeLimit") ? TimeInterval(task.suggestedMinutes * 60) : nil }
+    static func clock(_ seconds: TimeInterval) -> String { let t = Int(max(0, seconds)); return String(format: "%02d:%02d", t / 60, t % 60) }
     func attach(_ context: ModelContext) {
         guard self.context == nil else { return }; self.context = context; restore()
     }
     func tick() {
-        let now = Date()
+        let now = Date(), before = elapsed
         if timerRunning { elapsed += max(0, now.timeIntervalSince(lastTick)) }
         lastTick = now
+        if timerRunning, let limit = timeLimit, before < limit, elapsed >= limit { timeUpCount += 1 }
         if timerRunning && now.timeIntervalSince(lastPersist) >= 15 { persistDraft() }
     }
     @discardableResult func startAnswering() -> Bool {
@@ -138,18 +144,18 @@ enum WritingStage { case preparation, answering }
                     codex = CodexJudgeService(executable: connection.executable, model: configuration.codexModel, reasoning: configuration.codexReasoning)
                 } catch {
                     if Task.isCancelled || error is CancellationError { throw CancellationError() }
-                    let judges = Judge.allCases.filter { configuration.provider(for: $0) == .codex }.map(\.title).joined(separator: "、")
-                    throw JudgeExecutionError(judge: Judge.allCases.first { configuration.provider(for: $0) == .codex } ?? .c,
+                    let judges = configuration.judges.filter { configuration.provider(for: $0) == .codex }.map(\.title).joined(separator: "、")
+                    throw JudgeExecutionError(judge: configuration.judges.first { configuration.provider(for: $0) == .codex } ?? .c,
                         detail: "\(judges) · ChatGPT via Codex\n\(error.localizedDescription)\n尚未发起评卷，请在设置中检查连接。")
                 }
             }
             return ProviderRouter(configuration: configuration, deepSeek: selectedDeepSeek, codex: codex)
         }
     }
-    func submit(service: any EssayGradingService, isDemo: Bool, onComplete: @escaping (EssaySession) -> Void = { _ in }) {
-        launchSubmission(configuration: nil, isDemo: isDemo, onComplete: onComplete) { service }
+    func submit(service: any EssayGradingService, isDemo: Bool, judges: [Judge] = Judge.allCases, onComplete: @escaping (EssaySession) -> Void = { _ in }) {
+        launchSubmission(configuration: nil, judges: judges, isDemo: isDemo, onComplete: onComplete) { service }
     }
-    private func launchSubmission(configuration: GradingConfiguration?, isDemo: Bool, onComplete: @escaping (EssaySession) -> Void,
+    private func launchSubmission(configuration: GradingConfiguration?, judges: [Judge]? = nil, isDemo: Bool, onComplete: @escaping (EssaySession) -> Void,
                                   makeService: @escaping @Sendable () async throws -> any EssayGradingService) {
         guard !isGrading else { return }
         guard stage == .answering else { error = "请先点击开始答题。"; return }
@@ -159,7 +165,7 @@ enum WritingStage { case preparation, answering }
         do {
             let submission = GradingSubmission(input: GradingInput(task: task, question: question, essay: essay, rubric: try RubricLoader.load(task)),
                 duration: elapsed, inputMode: inputMode, questionImage: questionImage, sourceImages: sourceImages, parentSessionID: rewriteSessionID)
-            let job = BackgroundGradingJob(submission: submission, configuration: configuration, connecting: configuration?.requiresCodex == true)
+            let job = BackgroundGradingJob(submission: submission, configuration: configuration, connecting: configuration?.requiresCodex == true, judges: judges)
             gradingJob = job
             timerRunning = false; stage = .preparation
             gradingTask = Task {
@@ -170,7 +176,7 @@ enum WritingStage { case preparation, answering }
                     let service = try await makeService()
                     try Task.checkCancellation()
                     job.phase = .reviewing
-                    let report = try await GradingCoordinator(service: service).grade(submission.input, isDemo: isDemo) { event in
+                    let report = try await GradingCoordinator(service: service).grade(submission.input, isDemo: isDemo, judges: job.activeJudges) { event in
                         await MainActor.run { job.receive(event) }
                     }
                     try Task.checkCancellation()
@@ -181,6 +187,7 @@ enum WritingStage { case preparation, answering }
                     context.insert(session)
                     do { try context.save() } catch { context.delete(session); throw error }
                     job.session = session; job.finish(.completed)
+                    clearSubmittedAnswer(submission)
                     onComplete(session)
                 } catch {
                     if Task.isCancelled || error is CancellationError { job.finish(.cancelled) }
@@ -191,6 +198,31 @@ enum WritingStage { case preparation, answering }
                 }
             }
         } catch { self.error = error.localizedDescription }
+    }
+    /// After a saved review, an untouched submitted draft starts fresh; the answer lives on in History.
+    private func clearSubmittedAnswer(_ submission: GradingSubmission) {
+        guard stage == .preparation, task == submission.input.task, essay == submission.input.essay, question == submission.input.question else { return }
+        saveTask?.cancel()
+        rewriteSessionID = nil
+        essay = ""; elapsed = 0; inputMode = .typed; sourceImages = []
+        persistDraft()
+    }
+    /// Discards the current answer and timer for this task; the question stays.
+    func startOver() {
+        guard stage == .preparation, !essay.isEmpty || elapsed > 0 else { return }
+        saveTask?.cancel()
+        rewriteSessionID = nil
+        essay = ""; elapsed = 0; inputMode = .typed; sourceImages = []
+        persistDraft()
+    }
+    /// Loads a bank question into the current draft, like a text import.
+    @discardableResult func useQuestion(_ prompt: String, title: String, task next: WritingTask, image: Data? = nil) -> Bool {
+        guard stage == .preparation else { return false }
+        select(next)
+        guard next == task else { return false }
+        saveTask?.cancel()
+        question = prompt; questionLabel = title; questionImage = image; rewriteSessionID = nil
+        return persistDraft()
     }
     func cancelGrading() {
         guard let job = gradingJob, job.phase.isRunning else { return }

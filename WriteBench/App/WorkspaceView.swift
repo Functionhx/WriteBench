@@ -2,9 +2,9 @@ import SwiftUI
 import SwiftData
 
 enum Destination: String, CaseIterable, Identifiable {
-    case write = "Write", history = "History", statistics = "Statistics", mistakes = "Mistakes", settings = "Settings"
+    case write = "Write", history = "History", statistics = "Statistics", mistakes = "Mistakes", practice = "Practice", settings = "Settings"
     var id: String { rawValue }
-    var symbol: String { switch self { case .write: "square.and.pencil"; case .history: "clock"; case .statistics: "chart.bar.xaxis"; case .mistakes: "text.badge.xmark"; case .settings: "gearshape" } }
+    var symbol: String { switch self { case .write: "square.and.pencil"; case .history: "clock"; case .statistics: "chart.bar.xaxis"; case .mistakes: "text.badge.xmark"; case .practice: "rectangle.stack"; case .settings: "gearshape" } }
 }
 struct WorkspaceView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -12,6 +12,8 @@ struct WorkspaceView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var review: EssaySession?
     @State private var destination: Destination = .write
+    @Query(filter: #Predicate<ReviewCard> { !$0.mastered && !$0.archived }) private var learningCards: [ReviewCard]
+    private var dueCount: Int { let now = Date(); return learningCards.filter { $0.dueDate <= now }.count }
     @Bindable var store: WritingStore
     var body: some View {
         GeometryReader { geometry in
@@ -29,6 +31,7 @@ struct WorkspaceView: View {
                         switch destination {
                         case .statistics: StatisticsView()
                         case .mistakes: MistakesView(onOpen: { review = $0 })
+                        case .practice: PracticeView()
                         case .settings: SettingsView()
                         case .history: HistoryView(onOpen: { review = $0 })
                         case .write: EmptyView()
@@ -39,7 +42,8 @@ struct WorkspaceView: View {
         }.frame(minWidth: 980, minHeight: 700)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: store.isInSession)
         .background(WindowImmersionBridge(isImmersed: store.isInSession))
-        .task { store.attach(context) }
+        .task { store.attach(context); _ = try? ReviewCardSync.sync(context) }
+        .onChange(of: store.gradingJob?.phase == .completed) { _, done in if done { _ = try? ReviewCardSync.sync(context) } }
         .onChange(of: scenePhase) { _, phase in if phase != .active { store.tick(); store.persistDraft() } }
         .onChange(of: destination) { _, next in if next != .write { store.tick(); store.persistDraft() } }
         .sheet(item: $review) { session in ReviewView(session: session) { if !store.isInSession || store.leaveAnswering() { store.beginRewrite($0); destination = .write; review = nil } } }
@@ -64,8 +68,15 @@ struct WorkspaceView: View {
                     Button { destination = item } label: {
                         HStack(spacing: 17) {
                             Image(systemName: item.symbol).font(.system(size: 19, weight: .regular)).frame(width: 23)
-                            Text(item.rawValue).font(.system(size: 16, weight: destination == item ? .medium : .regular))
-                            Spacer()
+                                .overlay(alignment: .topTrailing) {
+                                    if item == .practice && dueCount > 0 {
+                                        Text(dueCount > 99 ? "99+" : "\(dueCount)").font(.system(size: 9, weight: .bold)).monospacedDigit().foregroundStyle(.white)
+                                            .padding(.horizontal, 4).padding(.vertical, 1).background(WB.blue, in: Capsule()).fixedSize()
+                                            .offset(x: 9, y: -7).accessibilityLabel("\(dueCount) 张待复习")
+                                    }
+                                }
+                            Text(item.rawValue).font(.system(size: 16, weight: destination == item ? .medium : .regular)).lineLimit(1)
+                                .frame(maxWidth: .infinity, alignment: .leading)
                         }.padding(.horizontal, 16).frame(height: 49)
                             .foregroundStyle(destination == item ? WB.blue : WB.secondary)
                             .background(destination == item ? Color(red: 0.87, green: 0.91, blue: 1) : .clear, in: RoundedRectangle(cornerRadius: 13))

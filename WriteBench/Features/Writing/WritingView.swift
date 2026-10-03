@@ -1,7 +1,11 @@
 import SwiftUI
+import SwiftData
 import AppKit
 
 struct WritingView: View {
+    @AppStorage("autoSubmitAtLimit") private var autoSubmitAtLimit = false
+    @AppStorage("examTimeLimit") private var examTimeLimit = false
+    @Query(filter: #Predicate<EssaySession> { !$0.isDemo }) private var sessions: [EssaySession]
     @Bindable var store: WritingStore
     @State private var ocrImport: OCRImport?
     @State private var isRecognizing = false
@@ -12,12 +16,16 @@ struct WritingView: View {
     var body: some View {
         Group {
             if store.isInSession {
-                ImmersiveWritingView(store: store, isRecognizing: isRecognizing, onSubmit: submit, onImport: { importImages(.essay) }, onCancelOCR: { ocrTask?.cancel() })
+                ImmersiveWritingView(store: store, isRecognizing: isRecognizing, onSubmit: { submit() }, onQuickSubmit: { submit(.quick) }, onImport: { importImages(.essay) }, onCancelOCR: { ocrTask?.cancel() })
             } else {
                 preparation
             }
         }
         .onReceive(clock) { _ in store.tick() }
+        .onChange(of: store.timeUpCount) { _, _ in
+            NSSound(named: "Glass")?.play()
+            if autoSubmitAtLimit, store.isInSession, !isRecognizing, !store.essay.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { submit() }
+        }
         .sheet(item: $ocrImport) { imported in
             OCRConfirmationView(imported: imported, initialQuestion: store.question, allowEssayImport: store.isInSession) { purpose, question, essay, images in
                 store.question = question
@@ -52,9 +60,13 @@ struct WritingView: View {
                 HStack(alignment: .center, spacing: 24) {
                     VStack(alignment: .leading, spacing: 7) {
                         Text(store.essay.isEmpty ? "开始后进入沉浸式答题" : "已有草稿，开始后继续作答").font(.system(size: 14, weight: .medium))
-                        Text("题目、答题区与计时。手写稿可在答题页导入。").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                        Text(examTimeLimit ? "考试限时 \(store.task.suggestedMinutes) 分钟\(autoSubmitAtLimit ? "，到点自动交卷" : "，到点提醒")。手写稿可在答题页导入。" : "题目、答题区与计时。手写稿可在答题页导入。").font(.system(size: 12)).foregroundStyle(WB.secondary)
                     }
                     Spacer()
+                    if !store.essay.isEmpty || store.elapsed > 0 {
+                        Button("清空重来") { store.startOver() }.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(WB.secondary)
+                            .help("清空本题型当前的作答和计时，题目保留").accessibilityIdentifier("startOver")
+                    }
                     Button { editingQuestion = false; store.startAnswering() } label: { HStack(spacing: 12) { Text("开始答题"); Image(systemName: "arrow.right") } }
                         .buttonStyle(PrimaryButtonStyle()).disabled(store.question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isRecognizing)
                         .keyboardShortcut(.return, modifiers: .command).accessibilityIdentifier("startAnswering")
@@ -78,7 +90,9 @@ struct WritingView: View {
                 }.buttonStyle(.plain)
             }
             Spacer()
-            Button { store.showLibrary = true } label: { Label("我的题库", systemImage: "books.vertical") }.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(WB.secondary)
+            Button { randomQuestion() } label: { Label("随机抽题", systemImage: "dice") }.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(WB.secondary)
+                .help("从内置题目中抽一道还没练过的\(store.task.title)").accessibilityIdentifier("randomQuestion")
+            Button { store.showLibrary = true } label: { Label("题库", systemImage: "books.vertical") }.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(WB.secondary)
         }
     }
     private var questionCard: some View {
@@ -107,8 +121,14 @@ struct WritingView: View {
             }
         }.padding(28).background(.white, in: RoundedRectangle(cornerRadius: 12)).overlay(RoundedRectangle(cornerRadius: 12).stroke(WB.line.opacity(0.8)))
     }
-    private func submit() {
-        store.submitConfigured(configuration: .load())
+    private func randomQuestion() {
+        let index = PracticeIndex(sessions), current = QuestionBank.key(store.question)
+        let candidates = QuestionBank.questions(for: store.task).filter { QuestionBank.key($0.prompt) != current }
+        guard let pick = candidates.filter({ index.attempts($0.task, $0.prompt).isEmpty }).randomElement() ?? candidates.randomElement() else { return }
+        store.useQuestion(pick.prompt, title: pick.title, task: pick.task)
+    }
+    private func submit(_ mode: GradingMode = .full) {
+        store.submitConfigured(configuration: GradingConfiguration.load().with(mode))
     }
     private func importImages(_ purpose: OCRPurpose) {
         guard !isRecognizing, !store.isGrading else { return }

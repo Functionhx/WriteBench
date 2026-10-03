@@ -17,7 +17,7 @@ import SwiftData
         do {
             // Hosted tests must never open or migrate the user's active database.
             if Self.isTestHost {
-                container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, EssayFolderMetadata.self,
+                container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, EssayFolderMetadata.self, ReviewCard.self,
                     configurations: ModelConfiguration(isStoredInMemoryOnly: true))
                 storageError = nil
                 return
@@ -28,7 +28,7 @@ import SwiftData
             let folder = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("WriteBench", isDirectory: true)
             try fm.createDirectory(at: folder, withIntermediateDirectories: true)
             let storeURL = fm.fileExists(atPath: legacy.path) ? legacy : folder.appendingPathComponent("default.store")
-            container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, EssayFolderMetadata.self, configurations: ModelConfiguration(url: storeURL))
+            container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, EssayFolderMetadata.self, ReviewCard.self, configurations: ModelConfiguration(url: storeURL))
             storageError = nil
             if UserDefaults.standard.string(forKey: "deepSeekModel") == "deepseek-v4-flash" { UserDefaults.standard.set(DeepSeekClient.defaultModel, forKey: "deepSeekModel") }
         }
@@ -41,6 +41,9 @@ import SwiftData
         }
         .windowStyle(.hiddenTitleBar).windowToolbarStyle(.unified).defaultSize(width: 1440, height: 900)
         .commands { CommandGroup(replacing: .newItem) {} }
-        Settings { SettingsView().frame(width: 780, height: 760).background(WB.canvas).preferredColorScheme(.light) }
+        Settings {
+            if let container { SettingsView().frame(width: 780, height: 760).background(WB.canvas).preferredColorScheme(.light).modelContainer(container) }
+            else { SettingsView(showsBackup: false).frame(width: 780, height: 760).background(WB.canvas).preferredColorScheme(.light) }
+        }
     }
 }

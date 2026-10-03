@@ -43,15 +43,21 @@ enum GradingProgressEvent: Sendable {
     let startedAt = Date()
     var finishedAt: Date?
     var phase: GradingPhase
-    var judges = Dictionary(uniqueKeysWithValues: Judge.allCases.map { ($0, JudgeProgress.waiting) })
+    /// Judges taking part in this submission: three for a full review, one for a quick review.
+    let activeJudges: [Judge]
+    var judges: [Judge: JudgeProgress]
     var previews: [Judge: String] = [:]
     var results: [Judge: ReviewerResult] = [:]
     var detail: String?
     var session: EssaySession?
     var completedCount: Int { judges.values.filter { $0 == .completed }.count }
+    var total: Int { activeJudges.count }
+    var isQuick: Bool { activeJudges.count == 1 }
 
-    init(submission: GradingSubmission, configuration: GradingConfiguration?, connecting: Bool) {
+    init(submission: GradingSubmission, configuration: GradingConfiguration?, connecting: Bool, judges: [Judge]? = nil) {
         self.submission = submission; self.configuration = configuration
+        activeJudges = judges ?? configuration?.judges ?? Judge.allCases
+        self.judges = Dictionary(uniqueKeysWithValues: activeJudges.map { ($0, JudgeProgress.waiting) })
         phase = connecting ? .connecting : .reviewing
     }
     func receive(_ event: GradingProgressEvent) {
@@ -67,7 +73,7 @@ enum GradingProgressEvent: Sendable {
     }
     func finish(_ phase: GradingPhase, detail: String? = nil) {
         self.phase = phase; self.detail = detail; finishedAt = Date()
-        for judge in Judge.allCases where judges[judge] == .waiting || judges[judge] == .reviewing { judges[judge] = .cancelled }
+        for judge in activeJudges where judges[judge] == .waiting || judges[judge] == .reviewing { judges[judge] = .cancelled }
     }
     func elapsedText(at date: Date) -> String {
         let seconds = max(0, Int((finishedAt ?? date).timeIntervalSince(startedAt)))

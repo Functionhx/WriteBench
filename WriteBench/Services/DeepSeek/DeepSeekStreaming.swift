@@ -5,6 +5,18 @@ protocol StreamingHTTPTransport: HTTPTransport {
     func stream(for request: URLRequest, onEvent: @escaping @Sendable (String) async throws -> Bool) async throws
 }
 
+/// OpenAI-compatible usage, including DeepSeek's prompt cache split. Every field is optional on the wire.
+struct DeepSeekUsage: Decodable, Sendable {
+    let prompt_tokens: Int?
+    let completion_tokens: Int?
+    let prompt_cache_hit_tokens: Int?
+    let completion_tokens_details: Details?
+    struct Details: Decodable, Sendable { let reasoning_tokens: Int? }
+    var tokenUsage: TokenUsage {
+        TokenUsage(input: prompt_tokens ?? 0, cachedInput: prompt_cache_hit_tokens ?? 0, output: completion_tokens ?? 0, reasoning: completion_tokens_details?.reasoning_tokens)
+    }
+}
+
 /// SSE framing is independent of network chunk boundaries and preserves UTF-8 and multi-line data.
 struct ServerSentEvents {
     private var line = Data()
@@ -37,6 +49,7 @@ actor DeepSeekStreamAccumulator {
     private var content = ""
     private var model: String?
     private var finishReason: String?
+    private var usage: TokenUsage?
     private var done = false
     private var lastPreview = ""
     private var lastEmittedAt = Date.distantPast
@@ -48,6 +61,7 @@ actor DeepSeekStreamAccumulator {
         do { chunk = try JSONDecoder().decode(Chunk.self, from: Data(event.utf8)) }
         catch { throw GradingError.invalidResponse("流式消息格式无效") }
         if let name = chunk.model { model = name }
+        if let reported = chunk.usage { usage = reported.tokenUsage }
         guard chunk.choices.count <= 1 else { throw GradingError.invalidResponse("返回了多份评阅") }
         if let choice = chunk.choices.first {
             guard choice.index == 0 else { throw GradingError.invalidResponse("流式评阅序号无效") }
@@ -68,15 +82,16 @@ actor DeepSeekStreamAccumulator {
         }
         return true
     }
-    func completed() throws -> (content: String, model: String) {
+    func completed() throws -> (content: String, model: String, usage: TokenUsage?) {
         guard done, finishReason == "stop", let model, !model.isEmpty, !content.isEmpty else {
             throw GradingError.invalidResponse("流式评阅中断或输出被截断")
         }
-        return (content, model)
+        return (content, model, usage)
     }
     private struct Chunk: Decodable {
         let model: String?
         let choices: [Choice]
+        let usage: DeepSeekUsage?
         struct Choice: Decodable {
             let index: Int
             let delta: Delta

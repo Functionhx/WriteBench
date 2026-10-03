@@ -122,11 +122,13 @@ private actor FixtureTransport: HTTPTransport {
         await #expect(throws: (any Error).self) { try await client.grade(input(), judge: .a) }
     }
 }
-@Test func rejectsInventedCorrectionSpans() async throws {
-    let correction = Correction(original: "This never occurred in the essay", corrected: "A replacement", category: .grammar, severity: .major, explanation: "Test")
-    let content = String(decoding: try JSONEncoder().encode(response(corrections: [correction])), as: UTF8.self)
+@Test func dropsInventedCorrectionSpansButKeepsTheReview() async throws {
+    let invented = Correction(original: "This never occurred in the essay", corrected: "A replacement", category: .grammar, severity: .major, explanation: "Test")
+    let real = Correction(original: "look forward to hear", corrected: "look forward to hearing", category: .grammar, severity: .major, explanation: "Gerund.")
+    let content = String(decoding: try JSONEncoder().encode(response(corrections: [invented, real])), as: UTF8.self)
     let client = DeepSeekClient(apiKey: "test", model: "test", transport: try FixtureTransport(content: content))
-    await #expect(throws: (any Error).self) { try await client.grade(input(), judge: .b) }
+    let result = try await client.grade(input(), judge: .b)
+    #expect(result.response.corrections.map(\.original) == ["look forward to hear"])
 }
 @Test @MainActor func swiftDataRoundTripAndRewrite() throws {
     let container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
@@ -311,9 +313,11 @@ private struct UnavailableGrader: EssayGradingService {
     #expect(WordCounter.count(store.essay) == 0)
     #expect(store.startAnswering())
     var saved: EssaySession?
+    let submitted = store.essay
     store.submit(service: RecordingGrader(), isDemo: true) { saved = $0 }
     let grading = try #require(store.gradingTask); await grading.value
-    #expect(saved?.originalEssay == store.essay)
+    #expect(saved?.originalEssay == submitted)
+    #expect(store.essay.isEmpty) // The graded draft starts fresh; the answer lives in History.
     #expect(saved != nil)
     #expect(try context.fetchCount(FetchDescriptor<EssaySession>()) == 1)
 }
