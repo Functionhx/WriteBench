@@ -1,4 +1,6 @@
 using System.IO;
+using System.Globalization;
+using System.Windows.Input;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -9,11 +11,12 @@ namespace WriteBench;
 
 public sealed partial class MainWindow : Window
 {
-    readonly LocalStore store; Settings settings; ExamTask task = ExamTask.All[0]; string question = "", essay = "", key = "", inputMode = "typed", page = "Write"; double elapsed; DateTime started; bool answering, grading; Guid? rewriteID; Session? review; CancellationTokenSource? gradingCancellation; TextBlock? clock; TextBox? editor; StackPanel content = new(); readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
+    readonly LocalStore store; Settings settings; ExamTask task = ExamTask.All[0]; string question = "", essay = "", key = "", inputMode = "typed", page = "Write"; readonly AnswerTimer writingTimer = new(); readonly Credentials credentials; string credentialStatus = "尚未配置"; readonly Dictionary<string, TextBlock> judgeStatus = new(); bool answering, grading; Guid? rewriteID; Session? review; CancellationTokenSource? gradingCancellation; TextBlock? clock; TextBox? editor; StackPanel content = new(); readonly DispatcherTimer timer = new() { Interval = TimeSpan.FromSeconds(1) };
     static readonly Brush Blue = new SolidColorBrush(Color.FromRgb(50, 102, 245)), Ink = new SolidColorBrush(Color.FromRgb(23, 35, 60)), Muted = new SolidColorBrush(Color.FromRgb(115, 129, 155)), Line = new SolidColorBrush(Color.FromRgb(227, 234, 245));
     public MainWindow(bool preview = false)
     {
         store = new LocalStore(preview ? Path.Combine(Path.GetTempPath(), "WriteBench-preview-" + Guid.NewGuid()) : null);
+        credentials = new Credentials(preview ? Path.Combine(Path.GetTempPath(), "WriteBench-preview-credentials-" + Guid.NewGuid()) : null);
         Title = "WriteBench";
         Width = 1320;
         Height = 870;
@@ -22,9 +25,11 @@ public sealed partial class MainWindow : Window
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Icon = new BitmapImage(new Uri("pack://application:,,,/Assets/Icon.png"));
         settings = store.Read<Settings>("settings.json") ?? new();
+        try { if (settings.RememberKey) key = credentials.Load(); credentialStatus = key.Length > 0 ? "已读取保存的 Key，尚未验证连接" : "尚未配置"; }
+        catch { credentialStatus = "保存的 Key 无法读取，请重新填写"; }
         LoadDraft();
         Render();
-        timer.Tick += (_, _) => { if (answering && !grading) { if (clock != null) clock.Text = TimeText(); SaveDraft(); } };
+        timer.Tick += (_, _) => { if (answering && writingTimer.Running) { if (clock != null) clock.Text = TimeText(); SaveDraft(); } };
         timer.Start();
         Closing += (_, _) => { SaveDraft(); gradingCancellation?.Cancel(); key = ""; timer.Stop(); };
     }
@@ -158,7 +163,7 @@ public sealed partial class MainWindow : Window
         q.TextChanged += (_, _) => { question = q.Text; SaveDraft(); };
         c.Children.Add(q);
         c.Children.Add(Button("从图片识别题目", () => _ = ImportImages(false)));
-        var start = Button(essay.Length == 0 ? "开始答题 →" : "继续答题 →", () => { if (string.IsNullOrWhiteSpace(question)) { Message("请先填写题目"); return; } SaveDraft(); answering = true; started = DateTime.UtcNow; Render(); }, true);
+        var start = Button(essay.Length == 0 ? "开始答题 →" : "继续答题 →", () => { if (string.IsNullOrWhiteSpace(question)) { Message("请先填写题目"); return; } SaveDraft(); answering = true; writingTimer.Resume(); Render(); }, true);
         content.Children.Add(start);
         content.Children.Add(Text("开始后进入唯一的沉浸式答题界面 · 草稿保存在本机", 12, Muted));
     }
@@ -174,6 +179,7 @@ public sealed partial class MainWindow : Window
         clock.VerticalAlignment = VerticalAlignment.Center;
         clock.Margin = new Thickness(0, 0, 24, 0);
         right.Children.Add(clock);
+        if (!writingTimer.Running && !grading) right.Children.Add(Button("继续作答（恢复计时）", () => { writingTimer.Resume(); Render(); }));
         var submit = Button(grading ? "正在评阅…" : "交卷", () => _ = Submit(), true);
         submit.IsEnabled = !grading;
         right.Children.Add(submit);
@@ -187,6 +193,13 @@ public sealed partial class MainWindow : Window
         bottom.Children.Add(Button(grading ? "取消评卷" : "导入手写稿", () => { if (grading) gradingCancellation?.Cancel(); else _ = ImportImages(true); }));
         DockPanel.SetDock(bottom, Dock.Bottom);
         root.Children.Add(bottom);
+        judgeStatus.Clear();
+        if (grading) {
+            var statuses = new StackPanel();
+            foreach (string judge in new[] { "A", "B", "C" }) { var status = Text($"Judge {judge} · 等待服务响应", 12, Muted); judgeStatus[judge] = status; statuses.Children.Add(status); }
+            DockPanel.SetDock(statuses, Dock.Bottom); root.Children.Add(statuses);
+        }
+
         var split = new Grid();
         split.ColumnDefinitions.Add(new()
         {
@@ -212,9 +225,18 @@ public sealed partial class MainWindow : Window
         var label = Text(task.Chinese ? "译文答题区" : "答题区", 13, Muted);
         DockPanel.SetDock(label, Dock.Top);
         answer.Children.Add(label);
+        var alignment = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 10) };
+        foreach (var item in new[] { ("左对齐", "left"), ("居中", "center"), ("右对齐", "right") }) {
+            var b = Button(item.Item1, () => AlignSelection(item.Item2)); b.Focusable = false; b.IsEnabled = !grading; alignment.Children.Add(b);
+        }
+        DockPanel.SetDock(alignment, Dock.Top); answer.Children.Add(alignment);
+
         editor = Input(essay, 200);
         editor.IsReadOnly = grading;
+        editor.AcceptsTab = true;
+        editor.PreviewKeyDown += (_, e) => { if (e.Key == Key.Tab && !editor.IsReadOnly) { editor.SelectedText = "    "; editor.SelectionStart += 4; editor.SelectionLength = 0; e.Handled = true; } };
         editor.FontSize = 20;
+        editor.SetValue(TextBlock.LineHeightProperty, 32.0);
         editor.VerticalAlignment = VerticalAlignment.Stretch;
         editor.Margin = new Thickness(0);
         editor.Background = task.ShowCount ? Brushes.White : RuledPaper();
@@ -233,6 +255,24 @@ public sealed partial class MainWindow : Window
         if (!grading)
             editor.Focus();
     }
+    void AlignSelection(string alignment)
+    {
+        if (editor == null || editor.IsReadOnly) return;
+        string text = editor.Text;
+        int start = editor.SelectionStart, end = start + editor.SelectionLength;
+        int first = start == 0 ? 0 : text.LastIndexOf('\n', start - 1) + 1;
+        // A selection ending at the next line's start does not include that next line.
+        int lastPosition = end > start && end > 0 && text[end - 1] == '\n' ? end - 1 : end;
+        int last = text.IndexOf('\n', Math.Min(lastPosition, text.Length));
+        if (last < 0) last = text.Length;
+        string segment = text[first..last];
+        double Measure(string value) => new FormattedText(value, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(editor.FontFamily, editor.FontStyle, editor.FontWeight, editor.FontStretch), editor.FontSize, Ink, VisualTreeHelper.GetDpi(editor).PixelsPerDip).WidthIncludingTrailingWhitespace;
+        double width = Math.Max(100, editor.ActualWidth - editor.Padding.Left - editor.Padding.Right - 24);
+        string replacement = string.Join("\n", segment.Split('\n').Select(line => AnswerLayout.Align(line.TrimEnd('\r'), alignment, width, Measure)));
+        editor.BeginChange();
+        editor.Select(first, last - first); editor.SelectedText = replacement;
+        editor.Select(first, replacement.Length); editor.EndChange(); editor.Focus();
+    }
     Brush RuledPaper()
     {
         var geometry = new GeometryDrawing(null, new Pen(Line, 0.7), new LineGeometry(new Point(0, 31), new Point(100, 31)));
@@ -247,7 +287,7 @@ public sealed partial class MainWindow : Window
         page = "Write";
         Render();
     }
-    double Duration() => elapsed + (answering && !grading ? (DateTime.UtcNow - started).TotalSeconds : 0);
+    double Duration() => writingTimer.Elapsed;
     string TimeText()
     {
         var seconds = (long)Math.Max(0, Duration());
@@ -259,7 +299,7 @@ public sealed partial class MainWindow : Window
         var draft = store.Read<Draft>("draft-" + task.Id + ".json");
         question = draft?.Question ?? task.Prompt;
         essay = draft?.Essay ?? "";
-        elapsed = draft?.Elapsed ?? 0;
+        writingTimer.Reset(draft?.Elapsed ?? 0);
         inputMode = draft?.InputMode ?? "typed";
     }
     void SaveDraft()
@@ -272,20 +312,52 @@ public sealed partial class MainWindow : Window
     {
         if (grading)
             return;
-        elapsed = Duration();
+        writingTimer.Pause();
         answering = false;
         SaveDraft();
         WindowState = WindowState.Normal;
+        Render();
+    }
+    void PauseForSubmission() { writingTimer.Pause(); SaveDraft(); if (clock != null) clock.Text = TimeText(); }
+    internal void CheckUI()
+    {
+        answering = true; writingTimer.Resume(); Render(); Show(); UpdateLayout();
+        editor!.Text = "Notice\r\nUniversity Library"; editor.Select(0, 0);
+        AlignSelection("center");
+        if (!editor.Text.StartsWith(" ") || !editor.Text.Contains("University Library")) throw new Exception("WPF line alignment failed");
+        editor.Undo();
+        if (!editor.Text.StartsWith("Notice")) throw new Exception("WPF alignment undo failed");
+        editor.Select(editor.Text.Length, 0);
+        var tab = new KeyEventArgs(Keyboard.PrimaryDevice, PresentationSource.FromVisual(editor), 0, Key.Tab) { RoutedEvent = Keyboard.PreviewKeyDownEvent };
+        editor.RaiseEvent(tab);
+        if (!tab.Handled || !editor.Text.EndsWith("    ")) throw new Exception("WPF Tab insertion failed");
+        editor.Undo();
+        if (editor.Text.EndsWith("    ")) throw new Exception("WPF Tab undo failed");
+        PauseForSubmission();
+        if (writingTimer.Running) throw new Exception("Submission did not pause WPF timer");
+        if (store.Read<Draft>("draft-" + task.Id + ".json")?.Elapsed != Duration()) throw new Exception("Paused duration not persisted");
+        grading = true; Render();
+        if (judgeStatus.Count != 3 || !editor!.IsReadOnly) throw new Exception("Grading UI did not lock answer/show progress");
+        grading = false; Render();
+        if (writingTimer.Running) throw new Exception("Failed grading resumed timer");
+        Close();
+    }
+    internal void PreviewPage(string destination)
+    {
+        answering = destination == "answer";
+        if (answering) { essay = "Notice\r\n\r\n    Our university library is recruiting student volunteers.\r\n\r\n                                         University Library"; writingTimer.Reset(600); }
+        else page = destination;
         Render();
     }
     async Task Submit()
     {
         if (grading || !answering)
             return;
-        SaveDraft();
+        PauseForSubmission();
         if (string.IsNullOrWhiteSpace(essay))
         {
             Message("请先填写作答内容。");
+            Render();
             return;
         }
         if (new[] { settings.A, settings.B, settings.C }.Contains("DeepSeek") && string.IsNullOrWhiteSpace(key))
@@ -296,16 +368,17 @@ public sealed partial class MainWindow : Window
                 page = "Settings";
                 Render();
             }
+            if (answering) Render();
             return;
         }
-        elapsed = Duration();
+        writingTimer.Pause();
         grading = true;
         gradingCancellation = new();
         Render();
         try
         {
-            var result = await Grading.Run(task, question, essay, key, settings, gradingCancellation.Token);
-            var session = new Session(Guid.NewGuid(), DateTime.Now, task.Id, question, essay, result, elapsed, inputMode);
+            var result = await Grading.Run(task, question, essay, key, settings, gradingCancellation.Token, (judge, status) => Dispatcher.Invoke(() => { if (judgeStatus.TryGetValue(judge, out var block)) block.Text = $"Judge {judge} · {status}"; }));
+            var session = new Session(Guid.NewGuid(), DateTime.Now, task.Id, question, essay, result, Duration(), inputMode);
             store.Add(session);
             review = session;
             answering = false;
@@ -314,7 +387,7 @@ public sealed partial class MainWindow : Window
         }
         catch (OperationCanceledException) { Message("评卷已取消，原稿保留。"); }
         catch (Exception e) { Message(e.Message); }
-        finally { grading = false; started = DateTime.UtcNow; gradingCancellation?.Dispose(); gradingCancellation = null; Render(); }
+        finally { grading = false; gradingCancellation?.Dispose(); gradingCancellation = null; Render(); }
     }
     void SettingsUI()
     {
@@ -336,8 +409,30 @@ public sealed partial class MainWindow : Window
         api.Children.Add(Text("DeepSeek API Key", 20));
         var input = new PasswordBox { Padding = new Thickness(12), Margin = new Thickness(0, 10, 0, 15), FontSize = 16 };
         api.Children.Add(input);
-        api.Children.Add(Button("使用此 Key", () => { if (string.IsNullOrWhiteSpace(input.Password)) { Message("请填入 API Key"); return; } key = input.Password.Trim(); input.Clear(); Message("Key 已启用，仅保留在本次运行内存中。无需 Windows 密码。"); }, true));
-        api.Children.Add(Text("由用户自行填写。不会写入文件、日志或注册表。", 12, Muted));
+        var remember = new CheckBox { Content = "记住 Key（使用当前 Windows 账户加密保存）", IsChecked = settings.RememberKey, Margin = new Thickness(0, 0, 0, 14) };
+        var keyStatus = Text(credentialStatus, 12, Muted);
+        remember.Click += (_, _) => {
+            try {
+                bool enabled = remember.IsChecked == true;
+                if (enabled && key.Length > 0) credentials.Save(key); else if (!enabled) credentials.Forget();
+                settings = settings with { RememberKey = enabled }; store.Write("settings.json", settings);
+            } catch { remember.IsChecked = settings.RememberKey; keyStatus.Text = "无法更新保存设置，请检查本机存储权限。"; }
+        };
+        api.Children.Add(remember);
+        api.Children.Add(Button("保存并检查连接", async () => {
+            if (string.IsNullOrWhiteSpace(input.Password) && key.Length == 0) { keyStatus.Text = "请填入 API Key"; return; }
+            if (!string.IsNullOrWhiteSpace(input.Password)) key = input.Password.Trim();
+            bool saved = false;
+            try {
+                if (settings.RememberKey) credentials.Save(key); else credentials.Forget();
+                saved = true;
+                input.Clear(); keyStatus.Text = "已启用 Key，正在验证连接…";
+                credentialStatus = keyStatus.Text = await DeepSeekProvider.Check(key, CancellationToken.None);
+            } catch (Exception e) { credentialStatus = keyStatus.Text = saved ? "Key 已启用，但连接验证未通过：" + e.Message : "Key 已在内存启用，但无法更新本机保存文件。"; }
+        }, true));
+        api.Children.Add(Button("忘记 Key", () => { credentials.Forget(); key = ""; input.Clear(); credentialStatus = keyStatus.Text = "已移除保存的 Key"; }));
+        api.Children.Add(keyStatus);
+        api.Children.Add(Text("关闭记住后仅保留在本次运行内存中。Key 不写入草稿、历史或日志。", 12, Muted));
         var codex = Card(content);
         codex.Children.Add(Text("ChatGPT · via Codex", 20));
         codex.Children.Add(Text("Uses your signed-in Codex account · 使用 Codex 额度", 12, Muted));
@@ -436,12 +531,28 @@ public sealed partial class MainWindow : Window
             corrections.Children.Add(Text("→ " + fix.Corrected, 16));
             corrections.Children.Add(Text(fix.Explanation, 13, Muted));
         }
+        var lessons = s.Report.Reviewers.OrderBy(r => Math.Abs(r.Response.Score - s.Report.FinalScore)).Select(r => r.Response.TranslationLessons).FirstOrDefault(l => l.Length > 0) ?? [];
+        if (lessons.Length > 0) {
+            var teaching = Card(content); teaching.Children.Add(Text("意群精讲", 24));
+            foreach (var lesson in lessons) {
+                var body = new StackPanel(); body.Children.Add(Text(lesson.Source, 17));
+                foreach (var group in lesson.Groups) {
+                    body.Children.Add(Text(group.Source, 16, Blue)); body.Children.Add(Text("→ " + group.Translation));
+                    foreach (var word in group.Vocabulary) body.Children.Add(Text($"{word.Word} · {word.PartOfSpeech}\n常见：{word.CommonMeaning}；本句：{word.ContextualMeaning}", 13, Muted));
+                    foreach (var technique in group.Techniques) body.Children.Add(Text("• " + technique, 13));
+                }
+                body.Children.Add(Text("完整参考译文：" + lesson.ReferenceTranslation, 17));
+                foreach (var note in lesson.AssemblyNotes) body.Children.Add(Text("组合要点：" + note, 13));
+                body.Children.Add(Text("针对你的译文：" + lesson.StudentAdvice, 13, Muted));
+                teaching.Children.Add(new Expander { Header = "句 " + lesson.Number, IsExpanded = true, Content = body, Margin = new Thickness(0, 8, 0, 16) });
+            }
+        }
         var improved = Card(content);
         improved.Children.Add(Text(t.Translation ? "参考改译" : "改进版本", 22));
         improved.Children.Add(Text(s.Report.Reviewers[1].Response.ImprovedVersion, 17));
         var original = Card(content);
         original.Children.Add(new Expander { Header = "查看原题与原稿", Content = Text(s.Question + "\n\n" + s.OriginalEssay) });
-        content.Children.Add(Button("开始重写 →", () => { task = t; question = s.Question; essay = string.IsNullOrEmpty(s.FinalRewrite) ? s.OriginalEssay : s.FinalRewrite; rewriteID = s.Id; elapsed = 0; inputMode = "typed"; answering = true; started = DateTime.UtcNow; Render(); }, true));
+        content.Children.Add(Button("开始重写 →", () => { task = t; question = s.Question; essay = string.IsNullOrEmpty(s.FinalRewrite) ? s.OriginalEssay : s.FinalRewrite; rewriteID = s.Id; writingTimer.Reset(); inputMode = "typed"; answering = true; writingTimer.Resume(); Render(); }, true));
     }
     FrameworkElement ExamLabel(string exam, bool selected)
     {

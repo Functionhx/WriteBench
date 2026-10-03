@@ -52,6 +52,17 @@ enum WritingStage { case preparation, answering }
         lastTick = Date(); timerRunning = true; stage = .answering
         return true
     }
+    func pauseForSubmission() {
+        guard stage == .answering, !isGrading else { return }
+        tick()
+        timerRunning = false
+        persistDraft()
+    }
+    func resumeAnswering() {
+        guard stage == .answering, !isGrading else { return }
+        lastTick = Date()
+        timerRunning = true
+    }
     @discardableResult func leaveAnswering() -> Bool {
         guard stage == .answering else { return false }
         tick()
@@ -122,6 +133,7 @@ enum WritingStage { case preparation, answering }
     }
     func submitConfigured(configuration: GradingConfiguration, loadKey: @MainActor () throws -> String = DeepSeekCredentials.load, onComplete: @escaping (EssaySession) -> Void = { _ in }) {
         guard stage == .answering, !isGrading else { return }
+        pauseForSubmission()
         needsAPIKey = false
         guard persistDraft() else { return }
         var deepSeek: DeepSeekClient?
@@ -165,7 +177,7 @@ enum WritingStage { case preparation, answering }
         guard stage == .answering else { error = "请先点击开始答题。"; return }
         guard let context else { return }
         guard !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, !essay.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { error = "请先填写题目与作答内容。"; return }
-        tick(); guard persistDraft() else { return }
+        pauseForSubmission(); guard persistDraft() else { return }
         do {
             let submission = GradingSubmission(input: GradingInput(task: task, question: question, essay: essay, rubric: try RubricLoader.load(task)),
                 duration: elapsed, inputMode: inputMode, questionImage: questionImage, sourceImages: sourceImages, parentSessionID: rewriteSessionID)

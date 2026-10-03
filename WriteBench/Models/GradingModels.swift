@@ -19,6 +19,63 @@ struct Correction: Codable, Hashable, Identifiable, Sendable {
     var severity: Severity
     var explanation: String
     var id: String { "\(category.rawValue)|\(original)|\(corrected)" }
+    private enum CodingKeys: String, CodingKey { case original, corrected, category, severity, explanation }
+    init(original: String, corrected: String, category: MistakeCategory, severity: Severity, explanation: String) {
+        self.original = original; self.corrected = corrected; self.category = category; self.severity = severity; self.explanation = explanation
+    }
+    /// Model output sometimes uses a category outside the list or a different case; keep the correction rather than reject the review.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        original = try c.decode(String.self, forKey: .original)
+        corrected = try c.decode(String.self, forKey: .corrected)
+        explanation = try c.decodeIfPresent(String.self, forKey: .explanation) ?? ""
+        let rawCategory = (try? c.decode(String.self, forKey: .category)) ?? ""
+        category = MistakeCategory.allCases.first { $0.rawValue.caseInsensitiveCompare(rawCategory) == .orderedSame } ?? MistakeCategory.closest(to: rawCategory)
+        severity = Severity(rawValue: ((try? c.decode(String.self, forKey: .severity)) ?? "").lowercased()) ?? .minor
+    }
+}
+extension MistakeCategory {
+    static func closest(to raw: String) -> MistakeCategory {
+        let value = raw.lowercased()
+        if value.contains("omi") || value.contains("漏") { return .omission }
+        if value.contains("add") || value.contains("增") { return .addition }
+        if value.contains("transl") || value.contains("误译") || value.contains("meaning") { return .mistranslation }
+        if value.contains("spell") || value.contains("typo") || value.contains("错别") { return .spelling }
+        if value.contains("colloc") { return .collocation }
+        if value.contains("article") { return .articles }
+        if value.contains("cohe") || value.contains("logic") || value.contains("连贯") { return .coherence }
+        if value.contains("regist") || value.contains("tone") || value.contains("style") { return .register }
+        if value.contains("word") || value.contains("lexi") || value.contains("vocab") || value.contains("用词") { return .wordChoice }
+        return .grammar
+    }
+}
+/// Decodes an array element by element and skips elements that do not fit, so one malformed item cannot void a review.
+struct LossyArray<Element: Decodable>: Decodable {
+    var elements: [Element]
+    init(from decoder: Decoder) throws {
+        var container = try decoder.unkeyedContainer()
+        var elements: [Element] = []
+        while !container.isAtEnd {
+            if let element = try? container.decode(Element.self) { elements.append(element) }
+            else { _ = try? container.decode(SkippedValue.self) }
+        }
+        self.elements = elements
+    }
+    private struct SkippedValue: Decodable { init(from decoder: Decoder) throws {} }
+}
+/// Numbers sometimes arrive as strings ("1.5") and labels as numbers (46).
+enum FlexibleValue {
+    static func double<K: CodingKey>(_ c: KeyedDecodingContainer<K>, _ key: K) throws -> Double {
+        if let value = try? c.decode(Double.self, forKey: key) { return value }
+        if let text = try? c.decode(String.self, forKey: key), let value = Double(text.trimmingCharacters(in: .whitespaces)) { return value }
+        throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: "Expected a number")
+    }
+    static func string<K: CodingKey>(_ c: KeyedDecodingContainer<K>, _ key: K) throws -> String {
+        if let value = try? c.decode(String.self, forKey: key) { return value }
+        if let value = try? c.decode(Int.self, forKey: key) { return String(value) }
+        if let value = try? c.decode(Double.self, forKey: key) { return value.rounded() == value ? String(Int(value)) : String(value) }
+        throw DecodingError.dataCorruptedError(forKey: key, in: c, debugDescription: "Expected text")
+    }
 }
 struct ExpressionSuggestion: Codable, Hashable, Sendable {
     var phrase: String
@@ -31,6 +88,15 @@ struct ScoringPoint: Codable, Hashable, Sendable {
     var earned: Double
     var max: Double
     var note: String
+    private enum CodingKeys: String, CodingKey { case source, earned, max, note }
+    init(source: String, earned: Double, max: Double, note: String) { self.source = source; self.earned = earned; self.max = max; self.note = note }
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        source = (try? FlexibleValue.string(c, .source)) ?? ""
+        earned = try FlexibleValue.double(c, .earned)
+        max = try FlexibleValue.double(c, .max)
+        note = (try? c.decode(String.self, forKey: .note)) ?? ""
+    }
 }
 /// Per-segment marks for English I translation, where each numbered underlined sentence is scored on its own.
 struct SegmentScore: Codable, Hashable, Sendable {
@@ -45,9 +111,11 @@ struct SegmentScore: Codable, Hashable, Sendable {
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        number = try c.decode(String.self, forKey: .number); score = try c.decode(Double.self, forKey: .score)
-        maxScore = try c.decode(Double.self, forKey: .maxScore); comment = try c.decode(String.self, forKey: .comment)
-        points = try c.decodeIfPresent([ScoringPoint].self, forKey: .points) ?? []
+        number = try FlexibleValue.string(c, .number).trimmingCharacters(in: CharacterSet(charactersIn: "() （）"))
+        score = try FlexibleValue.double(c, .score)
+        maxScore = (try? FlexibleValue.double(c, .maxScore)) ?? 2
+        comment = (try? c.decode(String.self, forKey: .comment)) ?? ""
+        points = (try? c.decodeIfPresent(LossyArray<ScoringPoint>.self, forKey: .points))??.elements ?? []
     }
 }
 struct JudgeResponse: Codable, Sendable {
@@ -67,36 +135,49 @@ struct JudgeResponse: Codable, Sendable {
     var improvements: [String] = []
     var expressions: [ExpressionSuggestion] = []
     var segments: [SegmentScore] = []
+    var translationLessons: [TranslationLesson] = []
     private enum CodingKeys: String, CodingKey {
-        case score, taskCompletion, language, coherence, register, majorErrors, minorErrors, summary, corrections, improvedVersion, strengths, weaknesses, improvements, expressions, segments
+        case score, taskCompletion, language, coherence, register, majorErrors, minorErrors, summary, corrections, improvedVersion, strengths, weaknesses, improvements, expressions, segments, translationLessons
     }
 }
 extension JudgeResponse {
     static func decodeProviderOutput(_ data: Data) throws -> JudgeResponse {
-        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-              ["strengths", "weaknesses", "improvements"].allSatisfy({ object[$0] is [String] }) else {
-            throw GradingError.invalidResponse("缺少优点、不足或改进建议")
+        guard let object = try JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            throw GradingError.invalidResponse("评分必须是 JSON 对象")
         }
-        return try JSONDecoder().decode(JudgeResponse.self, from: data)
+        for key in ["strengths", "weaknesses", "improvements"] where !(object[key] is [String]) {
+            throw GradingError.invalidResponse("字段 \(key) 缺失或不是文字列表")
+        }
+        do { return try JSONDecoder().decode(JudgeResponse.self, from: data) }
+        catch let error as DecodingError {
+            let path: [any CodingKey]
+            switch error {
+            case .keyNotFound(let key, let context): path = context.codingPath + [key]
+            case .typeMismatch(_, let context), .valueNotFound(_, let context), .dataCorrupted(let context): path = context.codingPath
+            @unknown default: path = []
+            }
+            throw GradingError.invalidResponse("字段 \(path.map(\.stringValue).joined(separator: ".")) 缺失或类型不符")
+        }
     }
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        score = try c.decode(Double.self, forKey: .score)
-        taskCompletion = try c.decode(Double.self, forKey: .taskCompletion)
-        language = try c.decode(Double.self, forKey: .language)
-        coherence = try c.decode(Double.self, forKey: .coherence)
-        register = try c.decode(Double.self, forKey: .register)
-        majorErrors = try c.decode([String].self, forKey: .majorErrors)
-        minorErrors = try c.decode([String].self, forKey: .minorErrors)
+        score = try FlexibleValue.double(c, .score)
+        taskCompletion = try FlexibleValue.double(c, .taskCompletion)
+        language = try FlexibleValue.double(c, .language)
+        coherence = try FlexibleValue.double(c, .coherence)
+        register = try FlexibleValue.double(c, .register)
+        majorErrors = try c.decodeIfPresent([String].self, forKey: .majorErrors) ?? []
+        minorErrors = try c.decodeIfPresent([String].self, forKey: .minorErrors) ?? []
         summary = try c.decode(String.self, forKey: .summary)
-        corrections = try c.decode([Correction].self, forKey: .corrections)
+        corrections = try c.decodeIfPresent(LossyArray<Correction>.self, forKey: .corrections)?.elements ?? []
         improvedVersion = try c.decode(String.self, forKey: .improvedVersion)
         // Existing saved reports predate these fields and remain readable.
         strengths = try c.decodeIfPresent([String].self, forKey: .strengths) ?? []
         weaknesses = try c.decodeIfPresent([String].self, forKey: .weaknesses) ?? []
         improvements = try c.decodeIfPresent([String].self, forKey: .improvements) ?? []
-        expressions = try c.decodeIfPresent([ExpressionSuggestion].self, forKey: .expressions) ?? []
-        segments = try c.decodeIfPresent([SegmentScore].self, forKey: .segments) ?? []
+        expressions = (try? c.decodeIfPresent(LossyArray<ExpressionSuggestion>.self, forKey: .expressions))??.elements ?? []
+        segments = (try? c.decodeIfPresent(LossyArray<SegmentScore>.self, forKey: .segments))??.elements ?? []
+        translationLessons = (try? c.decodeIfPresent(LossyArray<TranslationLesson>.self, forKey: .translationLessons))??.elements ?? []
     }
 }
 struct TokenUsage: Codable, Hashable, Sendable {
@@ -184,6 +265,12 @@ struct GradingReport: Codable, Sendable {
         return segments.map { segment in
             (segment, reviewers.compactMap { reviewer in reviewer.response.segments.first { $0.number == segment.number }.map { (reviewer.judge, $0.score) } })
         }
+    }
+    var translationLessons: [TranslationLesson] {
+        if let lessons = synthesis?.translationLessons, !lessons.isEmpty { return lessons }
+        // One coherent teacher's explanation, rather than concatenating three versions.
+        if let reviewer = medianReviewer, !reviewer.response.translationLessons.isEmpty { return reviewer.response.translationLessons }
+        return reviewers.first { !$0.response.translationLessons.isEmpty }?.response.translationLessons ?? []
     }
     private var revisionSource: ReviewerResult? { reviewers.first(where: { $0.judge == .b }) ?? reviewers.first }
     var improvedVersion: String {

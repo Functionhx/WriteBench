@@ -129,7 +129,11 @@ struct WritingView: View {
         store.useQuestion(pick.prompt, title: pick.title, task: pick.task)
     }
     private func submit(_ mode: GradingMode = .full) {
-        store.submitConfigured(configuration: GradingConfiguration.load().with(mode))
+        store.pauseForSubmission()
+        Task {
+            await DeepSeekCredentials.restoreRememberedKey()
+            store.submitConfigured(configuration: GradingConfiguration.load().with(mode))
+        }
     }
     private func importImages(_ purpose: OCRPurpose) {
         guard !isRecognizing, !store.isGrading else { return }

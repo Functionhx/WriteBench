@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import SwiftData
 import Testing
 @testable import WriteBench
@@ -387,4 +388,118 @@ private actor ScoreGrader: EssayGradingService {
     #expect(report.segmentScores.allSatisfy { $0.byJudge.count == 3 })
     let prompt = SynthesisPrompt.system(GradingInput(task: .kaoyanTranslation, question: "Q", essay: "答", rubric: "r"), report: report)
     #expect(prompt.contains("(46) 1.5/2.0") && prompt.contains("Do not mention examiners"))
+}
+
+@Test @MainActor func answerSheetAlignmentPersistsAsTextAndUndoRestoresIndentation() throws {
+    let view = RuledTextView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
+    view.isRichText = false
+    view.isEditable = true
+    view.allowsUndo = true
+    view.string = "  Notice\nBody with  two spaces\nUniversity Library"
+    view.apply(.init(font: .sans, size: 18, ruled: true))
+    view.layoutManager?.ensureLayout(for: try #require(view.textContainer))
+    let window = NSWindow(contentRect: view.frame, styleMask: [.titled], backing: .buffered, defer: false)
+    window.contentView = view
+    window.makeFirstResponder(view)
+    let undo = try #require(view.undoManager)
+    undo.beginUndoGrouping()
+    let original = view.string
+    view.setSelectedRange(NSRange(location: 3, length: 0))
+    view.alignLines(.right)
+    let right = view.string
+    let rightIndent = right.prefix(while: { $0 == " " }).count
+    #expect(rightIndent > 20)
+    #expect(right.hasSuffix("\nBody with  two spaces\nUniversity Library"))
+    undo.endUndoGrouping()
+    undo.undo()
+    #expect(view.string == original)
+    view.setSelectedRange(NSRange(location: 3, length: 0))
+    view.alignLines(.center)
+    let centerIndent = view.string.prefix(while: { $0 == " " }).count
+    #expect(abs(centerIndent * 2 - rightIndent) <= 1)
+    view.setSelectedRange(NSRange(location: 3, length: 0))
+    view.alignLines(.left)
+    #expect(view.string == "Notice\nBody with  two spaces\nUniversity Library")
+    view.setSelectedRange(NSRange(location: 6, length: 0))
+    view.insertTab(nil)
+    #expect(view.string.hasPrefix("Notice    \n"))
+}
+
+@Test @MainActor func trailingSpacesAdvanceTheCaret() throws {
+    let view = RuledTextView(frame: NSRect(x: 0, y: 0, width: 600, height: 400))
+    view.apply(.init(font: .sans, size: 18, ruled: true))
+    var xs: [CGFloat] = []
+    for spaces in 0...5 {
+        view.string = "Notice" + String(repeating: " ", count: spaces)
+        view.apply(.init(font: .sans, size: 18, ruled: true))
+        view.setSelectedRange(NSRange(location: (view.string as NSString).length, length: 0))
+        xs.append(try #require(view.caretFrame()).minX)
+    }
+    #expect(zip(xs, xs.dropFirst()).allSatisfy { $1 > $0 + 1 })
+}
+
+private func teachingLesson() -> TranslationLesson {
+    TranslationLesson(number: "46", source: "Reading makes us wiser.", groups: [
+        TranslationMeaningGroup(source: "Reading", translation: "阅读", vocabulary: [
+            TranslationVocabulary(word: "Reading", partOfSpeech: "动名词", commonMeaning: "阅读", contextualMeaning: "阅读这一活动")], techniques: ["动名词作主语，译为阅读。"]),
+        TranslationMeaningGroup(source: "makes us wiser.", translation: "让我们更有智慧", vocabulary: [], techniques: ["make + 宾语 + 形容词，表示使某人变得……。"])
+    ], referenceTranslation: "阅读使我们更有智慧。", assemblyNotes: ["主语与谓语顺接，保留比较级。"], studentAdvice: "你的译文保留了使役关系，注意译出比较级。")
+}
+@Test @MainActor func translationLessonsRoundTripOldReportsAndExport() throws {
+    var response = judgeResponse()
+    response.translationLessons = [teachingLesson()]
+    let data = try JSONEncoder().encode(response)
+    #expect(try JSONDecoder().decode(JudgeResponse.self, from: data).translationLessons == response.translationLessons)
+    var object = try #require(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    object.removeValue(forKey: "translationLessons")
+    let legacy = try JSONSerialization.data(withJSONObject: object)
+    #expect(try JSONDecoder().decode(JudgeResponse.self, from: legacy).translationLessons.isEmpty)
+    var grade = try report([8, 8, 8])
+    grade.reviewers[0].response.translationLessons = [teachingLesson()]
+    let session = try EssaySession(task: .kaoyanTranslation, question: "(46) <u>Reading makes us wiser.</u>", essay: "阅读使我们智慧。", duration: 90, inputMode: .typed, report: grade)
+    let exported = try #require(ReviewTextExporter.text(for: session))
+    #expect(exported.contains("意群精讲") && exported.contains("动名词") && exported.contains("完整译文") && exported.contains("比较级"))
+}
+@Test func teachingGroundsGroupsVocabularyAndExamScopeInSource() {
+    let input = GradingInput(task: .kaoyanTranslation, question: "Context. (46) <u>Reading makes us wiser.</u>", essay: "阅读使我们智慧。", rubric: "Test")
+    let lesson = teachingLesson()
+    #expect(TranslationTeaching.anchored([lesson], input: input).count == 1)
+    var wrong = lesson
+    wrong.number = "47"
+    #expect(TranslationTeaching.anchored([wrong], input: input).isEmpty)
+    wrong = lesson; wrong.groups.reverse()
+    #expect(TranslationTeaching.anchored([wrong], input: input).isEmpty)
+    wrong = lesson; wrong.groups[0].vocabulary.append(.init(word: "invented", partOfSpeech: "adj.", commonMeaning: "虚构", contextualMeaning: "虚构"))
+    #expect(TranslationTeaching.anchored([wrong], input: input).first?.groups[0].vocabulary.count == 1)
+    #expect(TranslationTeaching.instructions(.kaoyan2Translation).contains("Do not apply English I's 2-point rule"))
+    #expect(TranslationTeaching.instructions(.kaoyanSmall).contains("empty array"))
+}
+@Test func synthesisRetainsTeachingWithoutChangingMarks() throws {
+    let input = GradingInput(task: .kaoyanTranslation, question: "(46) <u>Reading makes us wiser.</u>", essay: "阅读使我们智慧。", rubric: "Test")
+    var grade = try report([8, 8, 8])
+    grade.reviewers[0].response.translationLessons = [teachingLesson()]
+    var draft = judgeResponse(1)
+    draft.translationLessons = []
+    let final = try SynthesisPrompt.finalize(draft, input: input, report: grade)
+    #expect(final.score == grade.finalScore)
+    #expect(final.translationLessons == [teachingLesson()])
+    let prompt = SynthesisPrompt.system(input, report: grade)
+    #expect(prompt.contains("commonMeaning") && prompt.contains("assemblyNotes") && prompt.contains("studentAdvice"))
+}
+@Test @MainActor func handInPausesBeforeCredentialsAndOnlyExplicitResumeRestarts() throws {
+    let container = try ModelContainer(for: EssaySession.self, WritingDraft.self, SavedQuestion.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let store = WritingStore()
+    store.attach(ModelContext(container))
+    store.essay = "A draft answer."
+    #expect(store.startAnswering())
+    store.elapsed = 90
+    store.submitConfigured(configuration: .init(), loadKey: { throw GradingError.missingKey })
+    #expect(store.needsAPIKey && !store.timerRunning && store.stage == .answering)
+    let frozen = store.elapsed
+    store.tick()
+    #expect(store.elapsed == frozen)
+    store.resumeAnswering()
+    #expect(store.timerRunning && store.elapsed == frozen)
+    store.pauseForSubmission()
+    #expect(!store.timerRunning)
 }

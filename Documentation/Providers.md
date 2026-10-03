@@ -24,9 +24,10 @@ History groups records at display time by task, normalized exact prompt and ques
 
 ## Direct key entry
 
-A user pastes a DeepSeek key and clicks **使用此 Key**. It works immediately from process memory, without accessing an old Keychain item. **在这台 Mac 上记住 Key** is optional and defaults off. No key is stored in UserDefaults, SwiftData, source, logs or a release package. Submission reads memory only. Explicit persistence and opt-in startup restoration run off the UI thread using a new data-protection Keychain item, with authentication UI disallowed. Legacy development items are never queried. An inaccessible item leaves the user able to enter the API key again. A failed optional save leaves the in-memory key usable and reports that it could not be remembered.
+A user pastes a DeepSeek key and clicks **使用此 Key**. **在这台 Mac 上记住 Key** defaults on. The key is stored in `~/Library/Application Support/WriteBench/Credentials/deepseek.key`, a plain-text file restricted to the current macOS user (directory 0700, file 0600). This avoids changing ad-hoc signing identities preventing restoration. The UI explicitly describes storage as unencrypted. No key is stored in UserDefaults, SwiftData, logs, source, backups, or release packages. Startup and submission restore the local file in the background. Previously opted-in v2 Keychain keys are imported when accessible, with authentication UI disallowed; failure is shown in Settings. A failed save keeps the session key available and explains the failure.
 
-Missing keys block both typed and OCR-confirmed submissions before any provider receives the essay. The draft is saved; the user can continue answering or open Settings. Clearing a key or quitting clears the session key. Remembered keys follow macOS Keychain storage rules.
+Missing keys block typed and OCR-confirmed submissions before any provider receives the essay. Drafts remain saved. Turning off remembering and saving a key removes the persisted copy; clearing a key removes both the local file and the old opted-in Keychain item where accessible.
+
 
 ## Official Codex subprocess
 

@@ -14,6 +14,11 @@ enum EditorFont: String, CaseIterable, Identifiable {
     }
 }
 
+struct EditorAlignmentRequest {
+    let id = UUID()
+    let alignment: NSTextAlignment
+}
+
 /// A plain-text Mac editor with native selection, find, spelling, and undo/redo.
 struct PlainTextEditor: NSViewRepresentable {
     @Binding var text: String
@@ -25,6 +30,7 @@ struct PlainTextEditor: NSViewRepresentable {
     /// Answer-sheet look: dark printed rules and the question number in the left margin.
     var sheetNumber: String? = nil
     var requestFocus = false
+    var alignmentRequest: EditorAlignmentRequest? = nil
 
     struct Style: Equatable {
         var font: EditorFont
@@ -75,11 +81,19 @@ struct PlainTextEditor: NSViewRepresentable {
         if view.string != text, !view.hasMarkedText() { view.string = text; view.undoManager?.removeAllActions(); view.apply(style) }
         if context.coordinator.style != style { context.coordinator.style = style; view.apply(style) }
         view.isEditable = editable
+        if let request = alignmentRequest, context.coordinator.lastAlignmentID != request.id {
+            context.coordinator.lastAlignmentID = request.id
+            DispatchQueue.main.async { [weak view] in
+                view?.alignLines(request.alignment)
+                if let view { view.window?.makeFirstResponder(view) }
+            }
+        }
     }
     func makeCoordinator() -> Coordinator { Coordinator(self) }
     @MainActor final class Coordinator: NSObject, NSTextViewDelegate {
         var parent: PlainTextEditor
         var style: Style?
+        var lastAlignmentID: UUID?
         init(_ parent: PlainTextEditor) { self.parent = parent }
         func textDidChange(_ notification: Notification) {
             guard let view = notification.object as? NSTextView else { return }
@@ -120,6 +134,42 @@ struct PlainTextEditor: NSViewRepresentable {
         updateCaret()
     }
 
+    // Alignment is encoded as spaces, so saving, reopening and grading preserve the same text.
+    override func alignLeft(_ sender: Any?) { alignLines(.left) }
+    override func alignCenter(_ sender: Any?) { alignLines(.center) }
+    override func alignRight(_ sender: Any?) { alignLines(.right) }
+    func alignLines(_ alignment: NSTextAlignment) {
+        guard isEditable, !hasMarkedText(), let container = textContainer else { return }
+        let source = string as NSString
+        let selection = selectedRange()
+        var selected = selection
+        // A selection ending at the next line's start should not align that next line.
+        if selected.length > 0, selected.location + selected.length <= source.length,
+           source.character(at: selected.location + selected.length - 1) == 10 { selected.length -= 1 }
+        let range = source.lineRange(for: selected)
+        let old = source.substring(with: range)
+        let font = style.font.font(size: style.size)
+        let spaceWidth = (" " as NSString).size(withAttributes: [.font: font]).width
+        let available = max(0, container.containerSize.width - 2 * container.lineFragmentPadding)
+        var lines = old.components(separatedBy: "\n")
+        for index in lines.indices {
+            if index == lines.count - 1, lines[index].isEmpty, old.hasSuffix("\n") { continue }
+            let content = lines[index].trimmingCharacters(in: .whitespaces)
+            let width = (content as NSString).size(withAttributes: [.font: font]).width
+            let fraction: CGFloat = alignment == .right ? 1 : alignment == .center ? 0.5 : 0
+            let count = spaceWidth > 0 ? max(0, Int(floor((available - width) * fraction / spaceWidth))) : 0
+            lines[index] = String(repeating: " ", count: count) + content
+        }
+        let replacement = lines.joined(separator: "\n")
+        guard replacement != old else { return }
+        insertText(replacement, replacementRange: range)
+        setSelectedRange(NSRange(location: range.location + (replacement as NSString).length - (replacement.hasSuffix("\n") ? 1 : 0), length: 0))
+    }
+    override func insertTab(_ sender: Any?) {
+        guard isEditable else { return }
+        insertText("    ", replacementRange: selectedRange())
+    }
+
     // MARK: Caret
 
     private let caret: NSView = {
@@ -144,7 +194,15 @@ struct PlainTextEditor: NSViewRepresentable {
         } else if index >= text.length {
             let glyph = manager.glyphIndexForCharacter(at: text.length - 1)
             lineRect = manager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)
-            x = manager.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: container).maxX
+            var positions = [CGFloat](repeating: 0, count: text.length + 1)
+            var indexes = [Int](repeating: 0, count: text.length + 1)
+            let count = manager.getLineFragmentInsertionPoints(forCharacterAt: text.length - 1, alternatePositions: false,
+                                                               inDisplayOrder: false, positions: &positions, characterIndexes: &indexes)
+            if let point = (0..<count).first(where: { indexes[$0] == index }) {
+                x = lineRect.minX + positions[point]
+            } else {
+                x = manager.boundingRect(forGlyphRange: NSRange(location: glyph, length: 1), in: container).maxX
+            }
         } else {
             let glyph = manager.glyphIndexForCharacter(at: index)
             lineRect = manager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: nil)

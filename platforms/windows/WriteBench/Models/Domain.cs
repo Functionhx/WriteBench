@@ -17,7 +17,10 @@ public record ExamTask(string Id, string Exam, string Title, int Maximum, string
  new("ieltsTask2","IELTS 雅思","Task 2",9,"ielts_task2","Some people believe universities should prepare students for employment. Others think they should provide knowledge for its own sake. Discuss both views and give your opinion. Write at least 250 words.")];
 }
 public record Correction([property: JsonRequired] string Original, [property: JsonRequired] string Corrected, [property: JsonRequired] string Category, [property: JsonRequired] string Severity, [property: JsonRequired] string Explanation);
-public record JudgeResponse([property: JsonRequired] double Score, [property: JsonRequired] double TaskCompletion, [property: JsonRequired] double Language, [property: JsonRequired] double Coherence, [property: JsonRequired] double Register, [property: JsonRequired] string[] MajorErrors, [property: JsonRequired] string[] MinorErrors, [property: JsonRequired] string Summary, [property: JsonRequired] Correction[] Corrections, [property: JsonRequired] string ImprovedVersion);
+public record JudgeResponse([property: JsonRequired] double Score, [property: JsonRequired] double TaskCompletion, [property: JsonRequired] double Language, [property: JsonRequired] double Coherence, [property: JsonRequired] double Register, string[] MajorErrors, string[] MinorErrors, [property: JsonRequired] string Summary, Correction[] Corrections, [property: JsonRequired] string ImprovedVersion)
+{
+    public TranslationLesson[] TranslationLessons { get; init; } = [];
+}
 public record Reviewer(string Judge, string Provider, string Model, string ReasoningEffort, JudgeResponse Response);
 public record Report(Reviewer[] Reviewers, double FinalScore, double Spread, string Confidence, string RubricVersion = "2026.09-v1", string PromptVersion = "windows-1.0");
 public record Session(Guid Id, DateTime Date, string TaskId, string Question, string OriginalEssay, Report Report, double WritingDuration, string InputMode, string FinalRewrite = "")
@@ -26,10 +29,10 @@ public record Session(Guid Id, DateTime Date, string TaskId, string Question, st
     public string CorrectedEssay => Report.Reviewers.First(r => r.Judge == "B").Response.ImprovedVersion;
 }
 public record Draft(string Question, string Essay, double Elapsed, string InputMode = "typed");
-public record Settings(string A = "DeepSeek", string B = "DeepSeek", string C = "Codex", string CodexPath = "", string CodexModel = "gpt-6-astra");
+public record Settings(string A = "DeepSeek", string B = "DeepSeek", string C = "Codex", string CodexPath = "", string CodexModel = "gpt-6-astra", bool RememberKey = true);
 public static class JSON
 {
-    public static readonly JsonSerializerOptions Options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true, WriteIndented = true, UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip };
+    public static readonly JsonSerializerOptions Options = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true, WriteIndented = true, NumberHandling = JsonNumberHandling.AllowReadingFromString, UnmappedMemberHandling = JsonUnmappedMemberHandling.Skip };
 }
 public static class Aggregator
 {

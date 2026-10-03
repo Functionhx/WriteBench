@@ -7,6 +7,7 @@ struct ImmersiveWritingView: View {
     @AppStorage("editorFont") private var editorFont = EditorFont.sans
     @AppStorage("editorFontSize") private var editorFontSize = 18.0
     @AppStorage("editorRuled") private var editorRuled = true
+    @State private var alignmentRequest: EditorAlignmentRequest?
     @Bindable var store: WritingStore
     var isRecognizing: Bool
     var onSubmit: () -> Void
@@ -22,6 +23,10 @@ struct ImmersiveWritingView: View {
                 Text(store.task.fullTitle).font(.system(size: 13, weight: .medium)).foregroundStyle(WB.secondary)
                 Spacer()
                 timer
+                if !store.timerRunning {
+                    Button("继续作答") { store.resumeAnswering() }.buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(WB.blue)
+                    Text("计时已暂停").font(.system(size: 11)).foregroundStyle(WB.secondary)
+                }
                 Button("快速单评", action: onQuickSubmit).buttonStyle(.plain).font(.system(size: 12)).foregroundStyle(WB.secondary)
                     .disabled(store.essay.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || store.isGrading || isRecognizing)
                     .keyboardShortcut(.return, modifiers: [.command, .shift]).help("只请一位评审，适合草稿；⇧⌘↩").accessibilityIdentifier("quickHandIn")
@@ -81,8 +86,19 @@ struct ImmersiveWritingView: View {
                 if showLiveWordCount { Text(store.task.targetLanguage == "Simplified Chinese" ? "\(store.essay.count) 字符" : "\(store.words) words").font(.system(size: 12)).monospacedDigit().foregroundStyle(WB.secondary).accessibilityIdentifier("liveWordCount") }
                 if let sheet { Text(sheet.sheet).font(.system(size: 11)).foregroundStyle(AnswerSheet.magenta) }
             }
+            HStack(spacing: 14) {
+                Button { alignmentRequest = EditorAlignmentRequest(alignment: .left) } label: { Image(systemName: "text.alignleft") }
+                    .help("当前行左对齐").accessibilityLabel("当前行左对齐")
+                Button { alignmentRequest = EditorAlignmentRequest(alignment: .center) } label: { Image(systemName: "text.aligncenter") }
+                    .help("当前行居中").accessibilityLabel("当前行居中")
+                Button { alignmentRequest = EditorAlignmentRequest(alignment: .right) } label: { Image(systemName: "text.alignright") }
+                    .help("当前行右对齐，适用于标题、日期或落款").accessibilityLabel("当前行右对齐")
+                Text("空格自由缩进 · Tab 插入四个空格 · 对齐作用于当前行或选中的行")
+                    .font(.system(size: 10)).foregroundStyle(WB.secondary)
+                Spacer()
+            }.buttonStyle(.plain).font(.system(size: 13)).foregroundStyle(WB.secondary).padding(.horizontal, 14)
             PlainTextEditor(text: $store.essay, fontSize: editorFontSize, fontStyle: editorFont, editable: true, identifier: "essayEditor",
-                            ruled: sheet != nil || (editorRuled && store.task.exam != .ielts), sheetNumber: sheet?.number, requestFocus: true)
+                            ruled: sheet != nil || (editorRuled && store.task.exam != .ielts), sheetNumber: sheet?.number, requestFocus: true, alignmentRequest: alignmentRequest)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .overlay(Rectangle().stroke(sheet == nil ? Color.black.opacity(0.12) : Color.black.opacity(0.85), lineWidth: sheet == nil ? 0.75 : 1.2))
                 .padding(sheet == nil ? 0 : 14)
