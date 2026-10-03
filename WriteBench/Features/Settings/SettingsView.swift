@@ -11,6 +11,7 @@ struct SettingsView: View {
     @AppStorage("editorRuled") private var editorRuled = true
     @AppStorage("autoSubmitAtLimit") private var autoSubmitAtLimit = false
     @AppStorage("quickJudge") private var quickJudge = Judge.b
+    @AppStorage("synthesizeReport") private var synthesizeReport = true
     @AppStorage(UsageCost.inputKey) private var priceInput = 0.0
     @AppStorage(UsageCost.cachedKey) private var priceCached = 0.0
     @AppStorage(UsageCost.outputKey) private var priceOutput = 0.0
@@ -107,6 +108,9 @@ struct SettingsView: View {
                 judgePicker(.b, selection: $providerB)
                 judgePicker(.c, selection: $providerC)
                 Text("三位评审独立阅读相同的原题和作文，本机取中位数。任一评审失败都不会生成总分或自动切换服务。").font(.system(size: 12)).foregroundStyle(WB.secondary).lineSpacing(4)
+                Toggle("三评后汇总成一份报告", isOn: $synthesizeReport).toggleStyle(.switch)
+                Text("开启后，三位评审完成后再请一位“主考官”（优先 DeepSeek，否则 Codex）把三份意见合成一份：一个结论、一份优缺点、一份逐句修改和一篇参考改写。分数仍由本机按中位数计算，汇总不改分。多一次请求；关闭或汇总失败时，由本机合并三份意见。")
+                    .font(.system(size: 12)).foregroundStyle(WB.secondary).lineSpacing(4)
                 Divider()
                 HStack {
                     VStack(alignment: .leading, spacing: 4) { Text("快速单评").font(.system(size: 13, weight: .semibold)); Text("答题页“快速单评”或 ⇧⌘↩ · 只请一位评审，适合草稿").font(.system(size: 11)).foregroundStyle(WB.secondary) }

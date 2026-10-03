@@ -75,7 +75,7 @@ import Testing
 @Test @MainActor func reviewCopyContainsAssessmentAndLeavesEssayCopySeparate() throws {
     let session = try historySession(score: 7.5)
     let text = try #require(ReviewTextExporter.text(for: session))
-    for required in ["7.5 / 10", "置信度：High", "Clear purpose.", "Incorrect verb form.", "Check gerunds", "Judge A", "Judge B", "Judge C", "look forward to hearing", "Use a gerund", "DeepSeek"] {
+    for required in ["7.5 / 10", "置信度：High", "Clear purpose.", "Incorrect verb form.", "Check gerunds", "Judge A", "Judge B", "Judge C", "look forward to hearing", "Use a gerund", "三位评审独立评分"] {
         #expect(text.contains(required))
     }
     #expect(!text.contains(session.originalEssay))

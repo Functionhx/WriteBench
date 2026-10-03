@@ -14,12 +14,13 @@ struct GradingSubmission: Sendable {
 }
 
 enum GradingPhase {
-    case connecting, reviewing, saving, cancelling, completed, failed, cancelled
-    var isRunning: Bool { [.connecting, .reviewing, .saving, .cancelling].contains(self) }
+    case connecting, reviewing, summarizing, saving, cancelling, completed, failed, cancelled
+    var isRunning: Bool { [.connecting, .reviewing, .summarizing, .saving, .cancelling].contains(self) }
     var title: String {
         switch self {
         case .connecting: "正在检查评审连接"
         case .reviewing: "正在后台评阅"
+        case .summarizing: "正在汇总成一份报告"
         case .saving: "正在保存评阅"
         case .cancelling: "正在取消评阅"
         case .completed: "评阅完成"
@@ -34,6 +35,7 @@ enum GradingProgressEvent: Sendable {
     case preview(Judge, String)
     case completed(ReviewerResult)
     case failed(Judge, String)
+    case summarizing
 }
 
 @MainActor @Observable final class BackgroundGradingJob: Identifiable {
@@ -63,6 +65,7 @@ enum GradingProgressEvent: Sendable {
     func receive(_ event: GradingProgressEvent) {
         guard phase == .reviewing else { return }
         switch event {
+        case .summarizing: phase = .summarizing
         case .started(let judge): judges[judge] = .reviewing
         case .preview(let judge, let text): previews[judge] = text
         case .completed(let result):

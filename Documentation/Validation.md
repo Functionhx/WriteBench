@@ -1,3 +1,8 @@
+# 1.8.0 validation · 2026-10-02
+
+- 72 Swift tests pass. New coverage: a full review calls the synthesizer once and a quick review never does; the synthesized report keeps the app's median score and diagnostics, keeps only corrections anchored in the answer, and becomes the conclusion, feedback and improved version; usage includes the synthesis call; a failed synthesis leaves the marks intact, falls back to the local merge and records why; English I translation totals are the sum of per-sentence medians; the synthesis prompt carries the fixed marks and forbids mentioning examiners.
+- The consolidated review page was rendered offscreen. No paid live grading was run.
+
 # 1.7.0 validation · 2026-10-02
 
 - 69 Swift tests pass. New coverage: English I translation totals reconcile to the sum of segment marks (allowing a single 0.5 typo deduction), out-of-range segments are dropped, segments are cleared for other tasks; per-sentence marks come from the median reviewer with every judge's mark; legacy reports without segments decode; prompts require segments only for English I translation and the Codex schema includes them; numbered underlined segments are extracted from the question.

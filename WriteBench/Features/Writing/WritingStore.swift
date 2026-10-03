@@ -149,14 +149,15 @@ enum WritingStage { case preparation, answering }
                         detail: "\(judges) · ChatGPT via Codex\n\(error.localizedDescription)\n尚未发起评卷，请在设置中检查连接。")
                 }
             }
-            return ProviderRouter(configuration: configuration, deepSeek: selectedDeepSeek, codex: codex)
+            let synthesizer: (any ReportSynthesizer)? = configuration.synthesize && configuration.mode == .full ? (selectedDeepSeek ?? codex) : nil
+            return (ProviderRouter(configuration: configuration, deepSeek: selectedDeepSeek, codex: codex), synthesizer)
         }
     }
-    func submit(service: any EssayGradingService, isDemo: Bool, judges: [Judge] = Judge.allCases, onComplete: @escaping (EssaySession) -> Void = { _ in }) {
-        launchSubmission(configuration: nil, judges: judges, isDemo: isDemo, onComplete: onComplete) { service }
+    func submit(service: any EssayGradingService, synthesizer: (any ReportSynthesizer)? = nil, isDemo: Bool, judges: [Judge] = Judge.allCases, onComplete: @escaping (EssaySession) -> Void = { _ in }) {
+        launchSubmission(configuration: nil, judges: judges, isDemo: isDemo, onComplete: onComplete) { (service, synthesizer) }
     }
     private func launchSubmission(configuration: GradingConfiguration?, judges: [Judge]? = nil, isDemo: Bool, onComplete: @escaping (EssaySession) -> Void,
-                                  makeService: @escaping @Sendable () async throws -> any EssayGradingService) {
+                                  makeService: @escaping @Sendable () async throws -> (any EssayGradingService, (any ReportSynthesizer)?)) {
         guard !isGrading else { return }
         guard stage == .answering else { error = "请先点击开始答题。"; return }
         guard let context else { return }
@@ -173,10 +174,10 @@ enum WritingStage { case preparation, answering }
                 defer { ProcessInfo.processInfo.endActivity(activity) }
                 defer { if gradingJob?.id == job.id { gradingTask = nil } }
                 do {
-                    let service = try await makeService()
+                    let (service, synthesizer) = try await makeService()
                     try Task.checkCancellation()
                     job.phase = .reviewing
-                    let report = try await GradingCoordinator(service: service).grade(submission.input, isDemo: isDemo, judges: job.activeJudges) { event in
+                    let report = try await GradingCoordinator(service: service, synthesizer: synthesizer).grade(submission.input, isDemo: isDemo, judges: job.activeJudges) { event in
                         await MainActor.run { job.receive(event) }
                     }
                     try Task.checkCancellation()

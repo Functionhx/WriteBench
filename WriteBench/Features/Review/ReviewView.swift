@@ -55,7 +55,7 @@ struct ReviewView: View {
                                 geometry.contentOffset.y + geometry.containerSize.height >= geometry.contentSize.height - 2
                         } action: { _, value in
                             atEnd = value
-                            if value, navigationTarget == nil { readingSection = .rewrite }
+                            if value, navigationTarget == nil { readingSection = sections.last ?? .rewrite }
                         }
                         .onScrollPhaseChange { _, phase in
                             if phase == .interacting || phase == .tracking { navigationTarget = nil }
@@ -72,7 +72,8 @@ struct ReviewView: View {
     }
     private var sections: [ReviewSection] {
         let hasSegments = !(session.report?.segmentScores.isEmpty ?? true)
-        return ReviewSection.allCases.filter { ($0 != .progress || baseline != nil) && ($0 != .segments || hasSegments) }
+        let hasRaw = (session.report?.reviewers.count ?? 0) > 1
+        return ReviewSection.allCases.filter { ($0 != .progress || baseline != nil) && ($0 != .segments || hasSegments) && ($0 != .examiners || hasRaw) }
     }
     private var reportContent: some View {
         VStack(alignment: .leading, spacing: 22) {
@@ -87,7 +88,8 @@ struct ReviewView: View {
                     VStack(alignment: .leading, spacing: 16) {
                         Text("评阅结论").font(.system(size: 18, weight: .semibold))
                         Text(report.conclusion).font(.system(size: 15)).lineSpacing(6).textSelection(.enabled)
-                        Text("采用中位分评审的结论；下方保留三位评审的独立意见。").font(.system(size: 11)).foregroundStyle(WB.secondary)
+                        Text(report.synthesis != nil ? "由三位评审的意见汇总而成，分数为三人独立评分的中位数。" : report.synthesisNote ?? (report.gradingMode == .quick ? "快速单评：一位评审的结论。" : "三位评审意见由本机合并，结论取自中位分评审。"))
+                            .font(.system(size: 11)).foregroundStyle(report.synthesisNote != nil && report.synthesis == nil ? WB.amber : WB.secondary)
                     }
                 }
                 Card {
@@ -97,24 +99,6 @@ struct ReviewView: View {
                         feedback("下一稿怎么改", symbol: "pencil.line", color: WB.blue, items: report.improvements, empty: "请参考下方逐句修改与改进版本。")
                     }
                 }.reviewAnchor(.feedback)
-                HStack(spacing: 14) {
-                    ForEach(report.reviewers) { reviewer in
-                        Card(padding: 18) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack { Text(reviewer.judge.title).font(.system(size: 13, weight: .semibold)); Spacer(); Image(systemName: "checkmark.circle.fill").foregroundStyle(WB.green) }
-                                Text(reviewer.response.score.scoreText).font(.system(size: 29, weight: .semibold, design: .rounded))
-                                Text(reviewer.judge.role).font(.system(size: 11)).foregroundStyle(WB.secondary)
-                                Text(reviewer.provider?.title ?? reviewer.model).font(.system(size: 10)).foregroundStyle(WB.secondary)
-                                Text("\(reviewer.model) · \(reviewer.reasoningEffort?.uppercased() ?? "")").font(.system(size: 10)).foregroundStyle(WB.secondary).lineLimit(1).help(reviewer.model)
-                                if reviewer.usage != nil || reviewer.duration != nil {
-                                    Text([reviewer.duration.map { UsageCost.duration($0) }, reviewer.usage.map { "\(UsageCost.tokens($0.input + $0.output)) tokens" }].compactMap { $0 }.joined(separator: " · "))
-                                        .font(.system(size: 10)).foregroundStyle(WB.secondary).lineLimit(1)
-                                        .help(reviewer.usage.map(UsageCost.summary) ?? "")
-                                }
-                            }
-                        }
-                    }
-                }
                 Card {
                     VStack(alignment: .leading, spacing: 20) {
                         HStack { Text("At a glance").font(.system(size: 17, weight: .semibold)); Spacer(); Text("Diagnostic scale · / 10").font(.system(size: 11)).foregroundStyle(WB.secondary) }
@@ -127,19 +111,6 @@ struct ReviewView: View {
                 }
                 Card {
                     VStack(alignment: .leading, spacing: 18) {
-                        Text("Examiner comments").font(.system(size: 18, weight: .semibold))
-                        ForEach(report.reviewers) { reviewer in
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("\(reviewer.judge.title) · \(reviewer.judge.role)").font(.system(size: 12, weight: .semibold)).foregroundStyle(WB.blue)
-                                Text(reviewer.response.summary).font(.system(size: 14)).lineSpacing(5).textSelection(.enabled)
-                                ForEach(reviewer.response.majorErrors, id: \.self) { Text("• " + $0).font(.system(size: 13)).foregroundStyle(WB.amber) }
-                                ForEach(reviewer.response.minorErrors, id: \.self) { Text("• " + $0).font(.system(size: 12)).foregroundStyle(WB.secondary) }
-                            }
-                        }
-                    }
-                }.reviewAnchor(.examiners)
-                Card {
-                    VStack(alignment: .leading, spacing: 18) {
                         HStack { Text("Sentence corrections").font(.system(size: 18, weight: .semibold)); Spacer(); Text("\(report.corrections.count) suggestions").font(.system(size: 12)).foregroundStyle(WB.secondary) }
                         if !report.corrections.isEmpty { AnnotatedEssayView(essay: session.originalEssay, corrections: report.corrections) }
                         if report.corrections.isEmpty { Text(report.isDemo ? "演示只包含少量本地示例规则。真实逐句修改请使用 DeepSeek 评分。" : "评审未标注逐句修改。请结合上方评语检查任务完成情况。").font(.system(size: 14)).foregroundStyle(WB.secondary) }
@@ -149,7 +120,7 @@ struct ReviewView: View {
                 Card {
                     VStack(alignment: .leading, spacing: 16) {
                         HStack { Text(session.task.isTranslation ? "参考改译" : "Improved version").font(.system(size: 18, weight: .semibold)); Spacer(); Button { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(session.correctedEssay, forType: .string) } label: { Label("Copy", systemImage: "doc.on.doc") }.buttonStyle(QuietButtonStyle()) }
-                        Text(session.task.isTranslation ? "结合原文检查译义与表达，参考译文并非唯一正确答案。" : "Language reviewer’s suggested revision").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                        Text(session.task.isTranslation ? "结合原文检查译义与表达，参考译文并非唯一正确答案。" : report.synthesis != nil ? "汇总后的参考改写" : "Language reviewer’s suggested revision").font(.system(size: 12)).foregroundStyle(WB.secondary)
                         Text(session.correctedEssay).font(.system(size: 15)).lineSpacing(7).textSelection(.enabled)
                         if !report.expressions.isEmpty {
                             Divider().padding(.vertical, 4)
@@ -185,6 +156,7 @@ struct ReviewView: View {
                         HStack { Spacer(); Button(session.finalRewrite.isEmpty ? "开始重写" : "继续重写") { onRewrite(session) }.buttonStyle(PrimaryButtonStyle()).accessibilityIdentifier("startRewrite") }
                     }
                 }.reviewAnchor(.rewrite)
+                if report.reviewers.count > 1 { rawReviews(report).reviewAnchor(.examiners) }
                 Text("\(session.task.targetLanguage == "Simplified Chinese" ? "\(session.originalEssay.count) characters" : "\(session.wordCount) words") · \(Int(session.writingDuration / 60)) min · \(session.inputMode.capitalized) · \(session.date.formatted(date: .abbreviated, time: .shortened))\nRubric \(session.rubricVersion) · Prompt \(session.graderPromptVersion) · \(session.modelName)\(usageLine(report))").font(.system(size: 10)).foregroundStyle(WB.secondary).textSelection(.enabled)
             } else {
                 EmptyState(symbol: "exclamationmark.triangle", title: "Unable to read this review", detail: "The saved review data is invalid. Your original question and essay are preserved below.")
@@ -208,10 +180,53 @@ struct ReviewView: View {
                     if report.gradingMode == .quick {
                         Text("一位评审 · 适合草稿，与三评分数对比时仅供参考").font(.system(size: 12)).foregroundStyle(WB.secondary)
                     } else {
-                        Text("Median of 3 independent reviewers").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                        Text(report.synthesis != nil ? "三位评审独立评分取中位数 · 汇总为一份报告" : "Median of 3 independent reviewers").font(.system(size: 12)).foregroundStyle(WB.secondary)
                         Text("Reviewer spread: \(report.spread.scoreText)").font(.system(size: 11)).foregroundStyle(WB.secondary)
                     }
                     if report.confidence == .low { Text("Reviewer disagreement · inspect each review").font(.system(size: 11)).foregroundStyle(WB.amber) }
+                }
+            }
+        }
+    }
+    /// The three independent reviews, kept for reference below the one consolidated report.
+    private func rawReviews(_ report: GradingReport) -> some View {
+        Card {
+            DisclosureGroup {
+                VStack(alignment: .leading, spacing: 18) {
+                        HStack(spacing: 14) {
+                            ForEach(report.reviewers) { reviewer in
+                                Card(padding: 18) {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack { Text(reviewer.judge.title).font(.system(size: 13, weight: .semibold)); Spacer(); Image(systemName: "checkmark.circle.fill").foregroundStyle(WB.green) }
+                                        Text(reviewer.response.score.scoreText).font(.system(size: 29, weight: .semibold, design: .rounded))
+                                        Text(reviewer.judge.role).font(.system(size: 11)).foregroundStyle(WB.secondary)
+                                        Text(reviewer.provider?.title ?? reviewer.model).font(.system(size: 10)).foregroundStyle(WB.secondary)
+                                        Text("\(reviewer.model) · \(reviewer.reasoningEffort?.uppercased() ?? "")").font(.system(size: 10)).foregroundStyle(WB.secondary).lineLimit(1).help(reviewer.model)
+                                        if reviewer.usage != nil || reviewer.duration != nil {
+                                            Text([reviewer.duration.map { UsageCost.duration($0) }, reviewer.usage.map { "\(UsageCost.tokens($0.input + $0.output)) tokens" }].compactMap { $0 }.joined(separator: " · "))
+                                                .font(.system(size: 10)).foregroundStyle(WB.secondary).lineLimit(1)
+                                                .help(reviewer.usage.map(UsageCost.summary) ?? "")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    ForEach(report.reviewers) { reviewer in
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("\(reviewer.judge.title) · \(reviewer.judge.role)").font(.system(size: 12, weight: .semibold)).foregroundStyle(WB.blue)
+                            Text(reviewer.response.summary).font(.system(size: 14)).lineSpacing(5).textSelection(.enabled)
+                            ForEach(reviewer.response.majorErrors, id: \.self) { Text("• " + $0).font(.system(size: 13)).foregroundStyle(WB.amber) }
+                            ForEach(reviewer.response.minorErrors, id: \.self) { Text("• " + $0).font(.system(size: 12)).foregroundStyle(WB.secondary) }
+                            if !reviewer.response.segments.isEmpty {
+                                Text(reviewer.response.segments.map { "(\($0.number)) \($0.score.scoreText)" }.joined(separator: " · ")).font(.system(size: 12)).monospacedDigit().foregroundStyle(WB.secondary)
+                            }
+                        }
+                    }
+                }.padding(.top, 16)
+            } label: {
+                HStack {
+                    Text("三位评审的原始意见").font(.system(size: 15, weight: .semibold))
+                    Text(report.reviewers.map { "\($0.judge.rawValue.uppercased()) \($0.response.score.scoreText)" }.joined(separator: " · ")).font(.system(size: 12)).monospacedDigit().foregroundStyle(WB.secondary)
                 }
             }
         }
@@ -233,8 +248,6 @@ struct ReviewView: View {
                             Text("\(segment.score.scoreText) / \(segment.maxScore.scoreText)").font(.system(size: 20, weight: .semibold, design: .rounded))
                                 .foregroundStyle(segment.score >= segment.maxScore ? WB.green : segment.score <= segment.maxScore / 4 ? WB.amber : WB.blue)
                             Spacer()
-                            Text(item.byJudge.map { "\($0.judge.rawValue.uppercased()) \($0.score.scoreText)" }.joined(separator: " · "))
-                                .font(.system(size: 11)).monospacedDigit().foregroundStyle(WB.secondary).help("三位评审对这一句的给分")
                         }
                         if let source = sources[segment.number] { Text(source).font(.system(size: 13)).foregroundStyle(WB.secondary).lineSpacing(4).textSelection(.enabled) }
                         if !segment.comment.isEmpty { Text(segment.comment).font(.system(size: 14)).lineSpacing(4).textSelection(.enabled) }
@@ -252,7 +265,7 @@ struct ReviewView: View {
                         }
                     }.padding(14).frame(maxWidth: .infinity, alignment: .leading).background(WB.canvas, in: RoundedRectangle(cornerRadius: 12))
                 }
-                Text("逐句分与采分点来自总分居中的那位评审，各句之和即总分；错别字整题累计满 3 个扣 0.5 分。右侧为三位评审各自的给分。")
+                Text(report.gradingMode == .quick ? "各句之和即总分；错别字整题累计满 3 个扣 0.5 分。" : "每句得分取三位评审的中位数，总分为各句之和；错别字整题累计满 3 个扣 0.5 分。")
                     .font(.system(size: 11)).foregroundStyle(WB.secondary).lineSpacing(3)
             }
         }
