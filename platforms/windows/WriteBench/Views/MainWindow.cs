@@ -236,6 +236,7 @@ public sealed partial class MainWindow : Window
         editor.AcceptsTab = true;
         editor.PreviewKeyDown += (_, e) => { if (e.Key == Key.Tab && !editor.IsReadOnly) { editor.SelectedText = "    "; editor.SelectionStart += 4; editor.SelectionLength = 0; e.Handled = true; } };
         editor.FontSize = 20;
+        editor.SetValue(TextBlock.LineHeightProperty, 32.0);
         editor.VerticalAlignment = VerticalAlignment.Stretch;
         editor.Margin = new Thickness(0);
         editor.Background = task.ShowCount ? Brushes.White : RuledPaper();
@@ -334,6 +335,7 @@ public sealed partial class MainWindow : Window
         if (editor.Text.EndsWith("    ")) throw new Exception("WPF Tab undo failed");
         PauseForSubmission();
         if (writingTimer.Running) throw new Exception("Submission did not pause WPF timer");
+        if (store.Read<Draft>("draft-" + task.Id + ".json")?.Elapsed != Duration()) throw new Exception("Paused duration not persisted");
         grading = true; Render();
         if (judgeStatus.Count != 3 || !editor!.IsReadOnly) throw new Exception("Grading UI did not lock answer/show progress");
         grading = false; Render();
@@ -410,18 +412,23 @@ public sealed partial class MainWindow : Window
         var remember = new CheckBox { Content = "记住 Key（使用当前 Windows 账户加密保存）", IsChecked = settings.RememberKey, Margin = new Thickness(0, 0, 0, 14) };
         var keyStatus = Text(credentialStatus, 12, Muted);
         remember.Click += (_, _) => {
-            settings = settings with { RememberKey = remember.IsChecked == true }; store.Write("settings.json", settings);
-            if (settings.RememberKey && key.Length > 0) credentials.Save(key); else if (!settings.RememberKey) credentials.Forget();
+            try {
+                bool enabled = remember.IsChecked == true;
+                if (enabled && key.Length > 0) credentials.Save(key); else if (!enabled) credentials.Forget();
+                settings = settings with { RememberKey = enabled }; store.Write("settings.json", settings);
+            } catch { remember.IsChecked = settings.RememberKey; keyStatus.Text = "无法更新保存设置，请检查本机存储权限。"; }
         };
         api.Children.Add(remember);
         api.Children.Add(Button("保存并检查连接", async () => {
             if (string.IsNullOrWhiteSpace(input.Password) && key.Length == 0) { keyStatus.Text = "请填入 API Key"; return; }
             if (!string.IsNullOrWhiteSpace(input.Password)) key = input.Password.Trim();
+            bool saved = false;
             try {
                 if (settings.RememberKey) credentials.Save(key); else credentials.Forget();
+                saved = true;
                 input.Clear(); keyStatus.Text = "已启用 Key，正在验证连接…";
                 credentialStatus = keyStatus.Text = await DeepSeekProvider.Check(key, CancellationToken.None);
-            } catch (Exception e) { credentialStatus = keyStatus.Text = "Key 已保存，但连接验证未通过：" + e.Message; }
+            } catch (Exception e) { credentialStatus = keyStatus.Text = saved ? "Key 已启用，但连接验证未通过：" + e.Message : "Key 已在内存启用，但无法更新本机保存文件。"; }
         }, true));
         api.Children.Add(Button("忘记 Key", () => { credentials.Forget(); key = ""; input.Clear(); credentialStatus = keyStatus.Text = "已移除保存的 Key"; }));
         api.Children.Add(keyStatus);

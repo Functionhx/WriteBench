@@ -82,6 +82,8 @@ static class SelfTest
         Assert(TranslationTeaching.Anchored([lesson], translation, "1. People learn through practice.").Length == 1, "Valid teaching rejected");
         Assert(TranslationTeaching.Anchored([lesson with { Source = "Invented source" }], translation, "1. People learn through practice.").Length == 0, "Invented teaching accepted");
         Assert(TranslationTeaching.Anchored([lesson with { Number = "2" }], translation, "1. People learn through practice.").Length == 0, "Wrong segment number accepted");
+        Assert(TranslationTeaching.Anchored([lesson], translation, "Context. (1) <u>People learn through practice.</u>").Length == 1, "Underlined source rejected");
+        Assert(TranslationTeaching.Anchored([lesson with { Number = "2" }], translation, "Context. (1) <u>People learn through practice.</u>").Length == 0, "Underlined source numbering bypassed");
         var retry = new FixtureHandler(_ => StreamResult(json), firstInvalid: true);
         using (var client = new HttpClient(retry)) {
             var result = await new DeepSeekProvider("fixture", suppliedClient: client).Grade(task, "question", "test", "A", CancellationToken.None);

@@ -22,7 +22,8 @@ public static class TranslationTeaching
             // Numbered English I segments must match their complete source, not context.
             if (task.Id == "kaoyanTranslation")
             {
-                var segments = Regex.Matches(question, @"(?m)^\s*(\d+)[.、)）]\s*(.+)$");
+                var underlined = Regex.Matches(question, @"\((\d+)\)\s*<u>(.*?)</u>", RegexOptions.Singleline);
+                var segments = underlined.Count > 0 ? underlined : Regex.Matches(question, @"(?m)^\s*(\d+)[.、)）]\s*(.+)$");
                 if (segments.Count > 0 && !segments.Any(m => m.Groups[1].Value == lesson.Number && Normalize(m.Groups[2].Value) == source)) return false;
             }
             int offset = 0;
