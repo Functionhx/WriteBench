@@ -29,7 +29,7 @@ final class PadUITests: XCTestCase {
         let first = app.staticTexts["elapsed"].label
         sleep(2)
         XCTAssertEqual(app.staticTexts["elapsed"].label, first)
-        let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "iPad-writing-landscape"; screenshot.lifetime = .keepAlways; add(screenshot)
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); screenshot.name = "iPad-writing-landscape"; screenshot.lifetime = .keepAlways; add(screenshot)
     }
     func testLibrarySelectsFullPrompt() {
         openPage("题库")
@@ -75,6 +75,6 @@ final class PadUITests: XCTestCase {
         openPage("设置")
         XCTAssertTrue(app.secureTextFields["api-key"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["导出备份到文件"].exists)
-        let screenshot = XCTAttachment(screenshot: app.screenshot()); screenshot.name = "iPad-settings-portrait"; screenshot.lifetime = .keepAlways; add(screenshot)
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot()); screenshot.name = "iPad-settings-portrait"; screenshot.lifetime = .keepAlways; add(screenshot)
     }
 }
