@@ -34,6 +34,9 @@ struct PadEditor: UIViewRepresentable {
         view.isEditable = editable
         if let command, command != context.coordinator.lastCommand {
             context.coordinator.lastCommand = command
+            let coordinator = context.coordinator
+            DispatchQueue.main.async { [weak view] in
+            guard let view else { return }
             switch command {
             case .spaces: view.becomeFirstResponder(); view.insertText("    ")
             case .alignment(let alignment, _):
@@ -44,7 +47,8 @@ struct PadEditor: UIViewRepresentable {
                 let style = NSMutableParagraphStyle(); style.alignment = alignment
                 view.textStorage.addAttribute(.paragraphStyle, value: style, range: range)
                 view.typingAttributes[.paragraphStyle] = style
-                context.coordinator.textViewDidChange(view)
+                coordinator.textViewDidChange(view)
+            }
             }
         }
     }

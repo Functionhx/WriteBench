@@ -62,6 +62,14 @@ final class PadUITests: XCTestCase {
         XCTAssertTrue(confirm.isEnabled); confirm.tap()
         XCTAssertTrue((app.textViews["question-editor"].value as? String ?? "").contains("Dear Alex"))
     }
+    func testBackgroundPausesTimerAndKeepsDraft() {
+        let editor = app.textViews["answer-editor"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 5)); editor.tap(); editor.typeText("Draft survives background")
+        app.buttons["收起键盘"].tap(); app.buttons["开始 / 继续"].tap()
+        XCUIDevice.shared.press(.home); app.activate()
+        XCTAssertTrue(app.buttons["开始 / 继续"].waitForExistence(timeout: 5))
+        XCTAssertTrue((editor.value as? String ?? "").contains("Draft survives background"))
+    }
     func testPortraitNavigationAndSettings() {
         XCUIDevice.shared.orientation = .portrait
         openPage("设置")

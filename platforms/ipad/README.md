@@ -5,7 +5,7 @@
 ## 功能
 
 - 考研英语一/二、六级、IELTS 的写作与翻译练习；66 道近五年六级完整正文随应用打包。
-- 宽窗口题目与答题卡并排；窄窗口上下排列。横竖屏、窗口大小变化均可使用。
+- 宽窗口题目与答题卡并排；窄窗口上下排列。横竖屏、窗口大小变化均可使用；窄屏切到手写时自动滚到答题卡。
 - 原生键盘编辑：保留连续空格，Tab 插入四个空格，当前/选中段落左对齐、居中、右对齐。草稿和备份保留段落格式。
 - PencilKit 手写纸、手指/Apple Pencil 输入、橡皮擦和清空确认；笔迹随草稿和备份保存。手写识别需要人工校对，再转换成评阅所需文字。
 - 文件 App 图片导入、本机 Vision 中英文 OCR、原图预览、强制校对确认；UTF-8 文本、带文字层 PDF 导入。
@@ -29,7 +29,7 @@ xcodebuild -project WriteBench.xcodeproj -scheme WriteBenchPad \
 
 使用本机实际可用的 iPad 模拟器名称（`xcrun simctl list devices available`）。模拟器构建使用临时签名；不要设置 `CODE_SIGNING_ALLOWED=NO` 来运行应用，否则 Keychain 会返回缺少 entitlement。
 
-CI 会自动选取可用 iPad 模拟器，执行单元测试与 UI 测试并上传 xcresult。测试使用内存数据库；OCR 测试用样本图片，不调用付费评阅。
+CI 会自动选取可用 iPad 模拟器，执行8 项单元测试与 6 项 UI 测试并上传 xcresult。测试使用内存数据库；OCR 测试用样本图片，不调用付费评阅。
 
 ## 安装到实体 iPad / TestFlight
 

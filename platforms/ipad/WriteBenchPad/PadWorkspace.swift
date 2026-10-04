@@ -68,11 +68,16 @@ struct PadWriting: View {
                 if geometry.size.width >= 850 {
                     HStack(alignment: .top, spacing: 20) { questionPanel.frame(width: geometry.size.width * 0.35); answerPanel }
                 } else {
-                    ScrollView { VStack(spacing: 20) { questionPanel.frame(minHeight: 270); answerPanel.frame(height: max(430, geometry.size.height * 0.65)) } }
+                    ScrollViewReader { proxy in
+                        ScrollView { VStack(spacing: 20) { questionPanel.frame(minHeight: 270); answerPanel.frame(height: max(430, geometry.size.height * 0.65)).id("answer-card") } }
+                            .onChange(of: handwriting) { _, active in
+                                if active { withAnimation(.easeOut(duration: 0.2)) { proxy.scrollTo("answer-card", anchor: .top) } }
+                            }
+                    }
                 }
             }.padding(20)
         }
-        .navigationTitle(store.task.fullTitle)
+        .navigationTitle(store.task.fullTitle).navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) } label: { Image(systemName: "keyboard.chevron.compact.down") }.accessibilityLabel("收起键盘") }; ToolbarItem(placement: .topBarTrailing) { Button("交卷") { store.pause(); if handwriting && store.pencilDrawing != nil { store.error = "请先识别并校对手写作答，再交卷。" } else { submitDialog = true } }.disabled(store.isGrading).accessibilityIdentifier("submit") } }
         .confirmationDialog("选择评阅方式", isPresented: $submitDialog, titleVisibility: .visible) {
             Button("快速评阅 · 1 位评审") { store.submit(quick: true) }

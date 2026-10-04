@@ -14,7 +14,7 @@ import SwiftData
     }
     var body: some Scene {
         WindowGroup {
-            if let container { PadWorkspace(store: store).modelContainer(container).tint(WB.blue) }
+            if let container { PadWorkspace(store: store).modelContainer(container).tint(WB.blue).preferredColorScheme(.light) }
             else { ContentUnavailableView("无法打开本地资料", systemImage: "externaldrive.badge.exclamationmark", description: Text(failure ?? "请重新启动应用。已有资料未被重置。")) }
         }
     }
