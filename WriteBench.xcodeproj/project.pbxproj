@@ -20,6 +20,7 @@
 		2B8AA947E573B4AD052F6F95 /* OCRService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F892E2F452C5999A8C08043 /* OCRService.swift */; };
 		3197344EF97F73265170A114 /* WorkspaceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9238EAE831BF69E5F210D72A /* WorkspaceView.swift */; };
 		32367F4CF29D3A467EFA453D /* MockGradingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 296A6193086826B2B071503F /* MockGradingService.swift */; };
+		337FAAE005C9D52F7539091A /* CETQuestionBank.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1689A9A92BD0E930F5FB82F9 /* CETQuestionBank.swift */; };
 		361B2B881C01F86CC3A784DC /* cet6_translation.md in Resources */ = {isa = PBXBuildFile; fileRef = 6CED406B3EAB7FA3947795C5 /* cet6_translation.md */; };
 		380960FEBBC3C2CDC16C3147 /* BackgroundGradingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34A07798AF0255AB8EAFF76A /* BackgroundGradingTests.swift */; };
 		3D7E00CED5955E5E709BAF28 /* RevisionViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7E5B6AA16B1E69446387608 /* RevisionViews.swift */; };
@@ -34,6 +35,7 @@
 		55E01FD08D907D18E2AFCBFC /* WritingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00C1A68BA4227431C3B8884 /* WritingStore.swift */; };
 		57B1584FB0F0DC411801C7D5 /* WritingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3788E5EB782131E544DDEDC /* WritingView.swift */; };
 		611D1CBBEE2017C06DCD6D8D /* GradingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634F608AF0DF72D3DE51E438 /* GradingService.swift */; };
+		6A2D61FFBE7F968DBCFB1164 /* cet6-2022-2026.json in Resources */ = {isa = PBXBuildFile; fileRef = 445C1E2A61051C152970E26E /* cet6-2022-2026.json */; };
 		6C1F7BEC5994E87DFA1CEF27 /* DeepSeekClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A399A503863E6199B340A50C /* DeepSeekClient.swift */; };
 		6C3E278AD86905C7C0A63BCE /* QuestionText.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0DD31CC0B614898B36ED76 /* QuestionText.swift */; };
 		6EF13FD59119BAB281533752 /* TranslationLessonCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11CD6DC48ADA2A2066B58A3 /* TranslationLessonCard.swift */; };
@@ -45,6 +47,7 @@
 		86CD1B5AEC144D4283491FC5 /* PlainTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD6C23EF9D33F68C7816C642 /* PlainTextEditor.swift */; };
 		892F119876541FA3E8699E90 /* BackgroundGradingJob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 31DECD6B9F0B3A54C27F4535 /* BackgroundGradingJob.swift */; };
 		8938EFAD301830E8B39DF4FD /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AEF0EC53CAA982107C3AA320 /* SettingsView.swift */; };
+		8A386C67F3728D7CC51BC97A /* CETQuestionBankTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FAD6385C4872B3E80D4B00C /* CETQuestionBankTests.swift */; };
 		938D3916C068089FACA81D61 /* MistakesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4391A8E13E5C7A35D0A1467A /* MistakesView.swift */; };
 		96EB80336D8E7D70E3839817 /* kaoyan_english1_small.md in Resources */ = {isa = PBXBuildFile; fileRef = 6A7B637179FC6E271F31DBF4 /* kaoyan_english1_small.md */; };
 		9EA1454709EC8802D43C7CA4 /* HistoryFolderEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 419DE9ABE9E26F14128B9B1E /* HistoryFolderEditor.swift */; };
@@ -100,6 +103,7 @@
 		1020C698B4DA8C1C47852419 /* CorrectionMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CorrectionMatcher.swift; sourceTree = "<group>"; };
 		11E52B4F1877F33DAEDBED32 /* EssayHistoryGroup.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EssayHistoryGroup.swift; sourceTree = "<group>"; };
 		161DE1C1158C7D408EAD0C20 /* WriteBenchTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WriteBenchTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		1689A9A92BD0E930F5FB82F9 /* CETQuestionBank.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CETQuestionBank.swift; sourceTree = "<group>"; };
 		17802ADDF6589CB80F4B4F01 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
 		1D56C8434F452DE88A5B9669 /* TextQuestionImportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextQuestionImportView.swift; sourceTree = "<group>"; };
 		2322E689ACEC8741C4B1C432 /* WriteBenchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WriteBenchApp.swift; sourceTree = "<group>"; };
@@ -115,7 +119,9 @@
 		405A85F2A07E72B5AD277D96 /* ielts_task1.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ielts_task1.md; sourceTree = "<group>"; };
 		419DE9ABE9E26F14128B9B1E /* HistoryFolderEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryFolderEditor.swift; sourceTree = "<group>"; };
 		4391A8E13E5C7A35D0A1467A /* MistakesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MistakesView.swift; sourceTree = "<group>"; };
+		445C1E2A61051C152970E26E /* cet6-2022-2026.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "cet6-2022-2026.json"; sourceTree = "<group>"; };
 		4BCC37FAB6E0DDC543B0D48B /* DeepSeekStreaming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepSeekStreaming.swift; sourceTree = "<group>"; };
+		4FAD6385C4872B3E80D4B00C /* CETQuestionBankTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CETQuestionBankTests.swift; sourceTree = "<group>"; };
 		51A76CC13C7CABACEC80CBAE /* WindowImmersionBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowImmersionBridge.swift; sourceTree = "<group>"; };
 		56792E2C1501DBCE7B80739B /* kaoyan_english2_translation.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = kaoyan_english2_translation.md; sourceTree = "<group>"; };
 		5AEB65E44D0601AEC6053865 /* Exam.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exam.swift; sourceTree = "<group>"; };
@@ -229,6 +235,7 @@
 			isa = PBXGroup;
 			children = (
 				31DECD6B9F0B3A54C27F4535 /* BackgroundGradingJob.swift */,
+				1689A9A92BD0E930F5FB82F9 /* CETQuestionBank.swift */,
 				5AEB65E44D0601AEC6053865 /* Exam.swift */,
 				DA0CA900CDD0D63C0AA6C39F /* GradingModels.swift */,
 				71E6EE384D62168057B908A3 /* QuestionBank.swift */,
@@ -269,6 +276,15 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		85C04166008095CC4B9B2FA4 /* QuestionBank */ = {
+			isa = PBXGroup;
+			children = (
+				445C1E2A61051C152970E26E /* cet6-2022-2026.json */,
+			);
+			name = QuestionBank;
+			path = Shared/QuestionBank;
+			sourceTree = "<group>";
+		};
 		8B0E934F4B4A8BD953E7FE15 /* Mistakes */ = {
 			isa = PBXGroup;
 			children = (
@@ -281,6 +297,7 @@
 			isa = PBXGroup;
 			children = (
 				34A07798AF0255AB8EAFF76A /* BackgroundGradingTests.swift */,
+				4FAD6385C4872B3E80D4B00C /* CETQuestionBankTests.swift */,
 				879136039903990A8065C3BD /* HistoryReviewTests.swift */,
 				296A6193086826B2B071503F /* MockGradingService.swift */,
 				9F5E568498AF07D6BF8C1335 /* PracticeLoopTests.swift */,
@@ -340,6 +357,7 @@
 		B32DAE4CDBDFC97EC7BE4B5A = {
 			isa = PBXGroup;
 			children = (
+				85C04166008095CC4B9B2FA4 /* QuestionBank */,
 				CC65E74040E23A5ED1894671 /* WriteBench */,
 				8E4D664CF8F8C451767E12E6 /* WriteBenchTests */,
 				6C0EBEADE4784897205C53CF /* Products */,
@@ -519,6 +537,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5317F309ED9004BD4665C0DC /* Assets.xcassets in Resources */,
+				6A2D61FFBE7F968DBCFB1164 /* cet6-2022-2026.json in Resources */,
 				361B2B881C01F86CC3A784DC /* cet6_translation.md in Resources */,
 				D3F29CFA674B891722D5B739 /* cet6_writing.md in Resources */,
 				DEBA962949C4AADDFCB2C5D0 /* ielts_task1.md in Resources */,
@@ -544,6 +563,7 @@
 				473B2ECB957707EDB2BF41AA /* BackgroundGradingView.swift in Sources */,
 				FAEA4C1F539996D40D1AD105 /* BackupService.swift in Sources */,
 				7E4B43903D948A9E26E11E8D /* BrandArt.swift in Sources */,
+				337FAAE005C9D52F7539091A /* CETQuestionBank.swift in Sources */,
 				DEF094BE47996A62C68AB985 /* CodexJudgeService.swift in Sources */,
 				C118D4E53ACEC303DE46EA50 /* CorrectionMatcher.swift in Sources */,
 				6C1F7BEC5994E87DFA1CEF27 /* DeepSeekClient.swift in Sources */,
@@ -598,6 +618,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				380960FEBBC3C2CDC16C3147 /* BackgroundGradingTests.swift in Sources */,
+				8A386C67F3728D7CC51BC97A /* CETQuestionBankTests.swift in Sources */,
 				F2DBAF31C0FA351AB0D126DB /* HistoryReviewTests.swift in Sources */,
 				32367F4CF29D3A467EFA453D /* MockGradingService.swift in Sources */,
 				A54BFAD371DEB925FCA1963B /* PracticeLoopTests.swift in Sources */,
@@ -671,7 +692,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -686,7 +707,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.9.1;
+				MARKETING_VERSION = 1.9.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -767,7 +788,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -788,7 +809,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.9.1;
+				MARKETING_VERSION = 1.9.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

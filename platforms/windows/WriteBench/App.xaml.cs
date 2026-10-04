@@ -25,7 +25,7 @@ public partial class App : Application
             try
             {
                 var window = new MainWindow(preview: true);
-                foreach (string page in new[] { "Write", "Settings", "answer" }) {
+                foreach (string page in new[] { "Write", "Settings", "answer", "CETLibrary" }) {
                     window.PreviewPage(page);
                     var view = (FrameworkElement)window.Content;
                     view.Measure(new Size(1320, 840)); view.Arrange(new Rect(0, 0, 1320, 840)); view.UpdateLayout();

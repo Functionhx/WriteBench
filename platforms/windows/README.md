@@ -1,4 +1,4 @@
-# WriteBench for Windows 1.9.1
+# WriteBench for Windows 1.9.2
 
 Native WPF / C# application, .NET 10, self-contained Windows x64. Extract the entire ZIP and run `WriteBench.exe`; keep all adjacent files and OCR data together. No separate .NET installation is required.
 
@@ -22,9 +22,9 @@ OCR uses bundled Tesseract English/Simplified Chinese models. On a clean Windows
 
 ## Validation and limitations
 
-The release workflow publishes on a real GitHub-hosted Windows runner, starts the published executable, checks domain/scoring/rejection, format retries, interrupted streams, DPAPI persistence/forgetting, timer pause/resume, actual WPF editor alignment/undo/Tab/progress, and real OCR. It renders preparation, settings and answer-sheet screens for visual inspection. Tests use deterministic provider fixtures, not paid live grading requests.
+The release workflow publishes on a real GitHub-hosted Windows runner, starts the published executable, checks domain/scoring/rejection, format retries, interrupted streams, DPAPI persistence/forgetting, timer pause/resume, actual WPF editor alignment/undo/Tab/progress, and real OCR. It also validates the 66-question full-text CET-6 bank, transactional imports and native library screen, and renders preparation, settings, answer-sheet and CET-6-library screens for visual inspection. Tests use deterministic provider fixtures, not paid live grading requests.
 
-This automated coverage does not replace manual Windows 11 checks of screen scaling, physical keyboard shortcuts, window switching, network/proxy configurations, or a live grading account. The portable application is not Authenticode-signed. Windows currently provides eight task presets and does not yet include every macOS workflow (such as the expanded question bank and unified synthesized review).
+This automated coverage does not replace manual Windows 11 checks of screen scaling, physical keyboard shortcuts, window switching, network/proxy configurations, or a live grading account. The portable application is not Authenticode-signed. Windows provides eight task presets and the shared 2022–2026 CET-6 full-text bank (33 writing and 33 translation questions). Other expanded macOS question banks and the unified synthesized review are not yet included.
 
 ## Build
 

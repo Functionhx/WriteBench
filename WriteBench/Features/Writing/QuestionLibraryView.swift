@@ -1,8 +1,10 @@
 import SwiftUI
 import SwiftData
+import AppKit
+import UniformTypeIdentifiers
 
 struct QuestionLibraryView: View {
-    enum Source: String, CaseIterable, Identifiable { case builtIn = "内置题目", saved = "我的题库"; var id: String { rawValue } }
+    enum Source: String, CaseIterable, Identifiable { case builtIn = "内置题目", saved = "我的题库", cet = "近五年六级"; var id: String { rawValue } }
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \SavedQuestion.date, order: .reverse) private var questions: [SavedQuestion]
@@ -17,6 +19,8 @@ struct QuestionLibraryView: View {
     @State private var year = ""
     @State private var newLabel = ""
     @State private var error: String?
+    @State private var cetEntries: [CETBankEntry] = []
+    @State private var importStatus = ""
 
     private struct Item: Identifiable {
         let id: String
@@ -27,33 +31,39 @@ struct QuestionLibraryView: View {
         var year: Int? = nil
         var label = ""
         var saved: SavedQuestion? = nil
+        var sourceURL: URL? = nil
     }
     private var currentTask: WritingTask { task ?? store.task }
     private var practiceIndex: PracticeIndex { PracticeIndex(sessions) }
     private var labels: [String] { Array(Set(questions.filter { $0.subtype == currentTask.rawValue }.map(\.label).filter { !$0.isEmpty })).sorted() }
     private func items(_ index: PracticeIndex) -> [Item] {
-        let all: [Item] = source == .builtIn
-            ? QuestionBank.questions(for: currentTask).map { Item(id: $0.id, task: $0.task, title: $0.title, prompt: $0.prompt) }
-            : questions.filter { $0.subtype == currentTask.rawValue }.map {
-                Item(id: $0.id.uuidString, task: currentTask, title: $0.title, prompt: $0.prompt, image: $0.image, year: $0.year, label: $0.label, saved: $0)
-            }
+        let all: [Item]
+        switch source {
+        case .builtIn: all = QuestionBank.questions(for: currentTask).map { Item(id: $0.id, task: $0.task, title: $0.title, prompt: $0.prompt) }
+        case .saved: all = questions.filter { $0.subtype == currentTask.rawValue }.map {
+            Item(id: $0.id.uuidString, task: currentTask, title: $0.title, prompt: $0.prompt, image: $0.image, year: $0.year, label: $0.label, saved: $0)
+        }
+        case .cet: all = cetEntries.filter { $0.task == currentTask.rawValue }.map {
+            Item(id: $0.id, task: currentTask, title: $0.title, prompt: $0.prompt, year: $0.year, label: $0.hasPrompt ? ($0.verification == "providedDocument" ? "真题 · 已从文件核对" : "用户导入 · 可练习") : "第三方来源索引 · 无正文", sourceURL: URL(string: $0.sourceUrl))
+        }
+        }
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
         return all.filter { item in
             (query.isEmpty || [item.title, item.prompt, item.label].contains { $0.localizedCaseInsensitiveContains(query) })
                 && (!unpractisedOnly || index.attempts(item.task, item.prompt).isEmpty)
-                && (source == .builtIn || label == nil || item.label == label)
+                && (source != .saved || label == nil || item.label == label)
         }
     }
     var body: some View {
         let index = practiceIndex, visible = items(index)
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                SectionHeading(title: "题库", subtitle: "内置题目均为原创练习；导入或识别的题目可保存到我的题库。")
+                SectionHeading(title: "题库", subtitle: "原创练习与近五年六级真题；导入或识别的题目可保存到我的题库。")
                 Spacer()
                 IconButton(symbol: "xmark", help: "Close") { dismiss() }
             }
             HStack(spacing: 12) {
-                Picker("来源", selection: $source) { ForEach(Source.allCases) { Text($0.rawValue).tag($0) } }.pickerStyle(.segmented).labelsHidden().fixedSize()
+                Picker("来源", selection: $source) { ForEach(Source.allCases.filter { $0 != .cet || store.task.exam == .cet6 }) { Text($0.rawValue).tag($0) } }.pickerStyle(.segmented).labelsHidden().fixedSize()
                 Picker("题型", selection: Binding(get: { currentTask }, set: { task = $0; label = nil })) {
                     ForEach(store.task.exam.tasks) { Text($0.title).tag($0) }
                 }.labelsHidden().frame(width: 140)
@@ -65,17 +75,29 @@ struct QuestionLibraryView: View {
                 }
                 Spacer()
                 Toggle("只看未练习", isOn: $unpractisedOnly).toggleStyle(.checkbox).font(.system(size: 12))
-                Button { if let pick = (visible.filter { index.attempts($0.task, $0.prompt).isEmpty }.randomElement() ?? visible.randomElement()) { use(pick) } } label: {
+                Button { if let pick = (visible.filter { !$0.prompt.isEmpty && index.attempts($0.task, $0.prompt).isEmpty }.randomElement() ?? visible.filter { !$0.prompt.isEmpty }.randomElement()) { use(pick) } } label: {
                     Label("随机一道", systemImage: "dice")
-                }.buttonStyle(QuietButtonStyle()).disabled(visible.isEmpty).help("优先抽取还没练过的题")
+                }.buttonStyle(QuietButtonStyle()).disabled(!visible.contains { !$0.prompt.isEmpty }).help("优先抽取还没练过的题")
             }
             HStack {
                 Image(systemName: "magnifyingglass").foregroundStyle(WB.secondary)
                 TextField("搜索题目", text: $search).textFieldStyle(.plain)
             }.padding(10).background(.white, in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).stroke(WB.line))
+            if store.task.exam == .cet6 {
+                HStack {
+                    Text("2022–2026 · 写作、翻译各 33 题 · 套次沿用资料编号。").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                    Spacer()
+                    Button("批量导入题库 JSON") { importCETBank() }.buttonStyle(QuietButtonStyle())
+                }
+                if !importStatus.isEmpty { Text(importStatus).font(.system(size: 12)).foregroundStyle(WB.green) }
+            }
             ScrollView {
                 VStack(spacing: 10) {
-                    ForEach(visible) { item in row(item, attempts: index.attempts(item.task, item.prompt)) }
+                    ForEach(visible) { item in
+                        if item.prompt.isEmpty, let url = item.sourceURL {
+                            Card(padding: 16) { VStack(alignment: .leading, spacing: 8) { Text(item.title).font(.system(size: 14, weight: .semibold)); Text("第三方来源索引 · 未核对正文，不能直接答题").font(.system(size: 12)).foregroundStyle(WB.secondary); Link("打开来源资料", destination: url) } }
+                        } else { row(item, attempts: index.attempts(item.task, item.prompt)) }
+                    }
                     if visible.isEmpty {
                         EmptyState(symbol: "books.vertical", title: source == .saved ? "把好题留在这里" : "没有符合条件的题目",
                                    detail: source == .saved ? "在写作页导入或识别题目，再在下方命名保存。" : "换一个题型，或关闭“只看未练习”。")
@@ -84,7 +106,18 @@ struct QuestionLibraryView: View {
             }
             if source == .saved { saveBar }
             if let error { Text(error).foregroundStyle(WB.amber).font(.system(size: 12)) }
-        }.padding(28).frame(width: 760, height: 640).background(WB.canvas)
+        }.padding(28).frame(width: 900, height: 640).background(WB.canvas).onAppear { reloadCETBank(); if store.task.exam == .cet6 { source = .cet } }
+    }
+    private func reloadCETBank() {
+        do { cetEntries = try CETQuestionBank.entries() } catch { self.error = error.localizedDescription }
+    }
+    private func importCETBank() {
+        let panel = NSOpenPanel(); panel.allowedContentTypes = [.json]; panel.allowsMultipleSelection = false
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let count = try CETQuestionBank.importData(Data(contentsOf: url))
+            reloadCETBank(); source = .cet; importStatus = "已导入 \(count) 道完整题目；同 ID 更新，其余题目保留。"; error = nil
+        } catch { self.error = error.localizedDescription }
     }
     private func row(_ item: Item, attempts: [EssaySession]) -> some View {
         Button { use(item) } label: {

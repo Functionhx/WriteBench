@@ -11,7 +11,8 @@ struct BankQuestion: Identifiable, Hashable, Sendable {
 enum QuestionBank {
     static func questions(for task: WritingTask) -> [BankQuestion] {
         let sample = BankQuestion(id: "\(task.rawValue)-0", task: task, title: task == .kaoyanSmall ? "原创练习 · 邀请信" : "原创练习", prompt: task.sampleQuestion)
-        return [sample] + extra(task).enumerated().map { BankQuestion(id: "\(task.rawValue)-\($0.offset + 1)", task: task, title: $0.element.0, prompt: $0.element.1) }
+        let imported = ((try? CETQuestionBank.entries()) ?? []).filter { $0.task == task.rawValue && $0.hasPrompt }.map { BankQuestion(id: $0.id, task: task, title: $0.title, prompt: $0.prompt) }
+        return imported + [sample] + extra(task).enumerated().map { BankQuestion(id: "\(task.rawValue)-\($0.offset + 1)", task: task, title: $0.element.0, prompt: $0.element.1) }
     }
     static var all: [BankQuestion] { WritingTask.allCases.flatMap(questions(for:)) }
 
