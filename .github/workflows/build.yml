@@ -13,6 +13,32 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build and test SwiftUI app
         run: xcodebuild -project WriteBench.xcodeproj -scheme WriteBench -configuration Debug -derivedDataPath build -destination 'platform=macOS' CODE_SIGN_IDENTITY=- test
+  ipad:
+    runs-on: macos-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Select an available iPad simulator
+        run: |
+          xcrun simctl list devices available -j > /tmp/simulators.json
+          python3 - <<'PY' >> "$GITHUB_ENV"
+          import json
+          devices = json.load(open('/tmp/simulators.json'))['devices']
+          ipad = next(d for group in devices.values() for d in group if d['name'].startswith('iPad'))
+          print('IPAD_SIMULATOR=' + ipad['udid'])
+          PY
+      - name: Boot iPad simulator
+        run: |
+          xcrun simctl boot "$IPAD_SIMULATOR"
+          xcrun simctl bootstatus "$IPAD_SIMULATOR" -b
+      - name: Build and test native iPad app
+        run: xcodebuild -project WriteBench.xcodeproj -scheme WriteBenchPad -destination "platform=iOS Simulator,id=$IPAD_SIMULATOR" -parallel-testing-enabled NO -derivedDataPath build-ipad CODE_SIGN_IDENTITY=- test
+      - name: Upload iPad test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipad-verification
+          path: build-ipad/Logs/Test/*.xcresult
   windows:
     runs-on: windows-latest
     steps:

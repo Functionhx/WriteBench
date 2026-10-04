@@ -42,6 +42,8 @@ import SwiftData
 }
 
 @Model final class WritingDraft {
+    @Attribute(.externalStorage) var richText: Data? = nil
+    @Attribute(.externalStorage) var pencilDrawing: Data? = nil
     @Attribute(.unique) var subtype: String
     var question: String
     var questionLabel: String

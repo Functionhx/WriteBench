@@ -35,7 +35,91 @@ targets:
     sources: [WriteBenchTests]
     dependencies:
       - target: WriteBench
+  WriteBenchPad:
+    type: application
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - platforms/ipad/WriteBenchPad
+      - WriteBench/Models/Exam.swift
+      - WriteBench/Models/GradingModels.swift
+      - WriteBench/Models/TranslationLesson.swift
+      - WriteBench/Models/QuestionBank.swift
+      - WriteBench/Models/CETQuestionBank.swift
+      - WriteBench/Persistence
+      - WriteBench/Components/QuestionText.swift
+      - WriteBench/DesignSystem/Theme.swift
+      - WriteBench/Services/DeepSeek/DeepSeekClient.swift
+      - WriteBench/Services/DeepSeek/DeepSeekStreaming.swift
+      - WriteBench/Services/DeepSeek/KeychainService.swift
+      - WriteBench/Services/Grading/GradingService.swift
+      - WriteBench/Services/Grading/ReportSynthesis.swift
+      - WriteBench/Services/Grading/CorrectionMatcher.swift
+      - WriteBench/Services/Grading/UsageCost.swift
+      - WriteBench/Services/OCR/OCRService.swift
+      - WriteBench/Services/Backup/BackupService.swift
+      - path: WriteBench/Rubrics
+        buildPhase: resources
+      - path: Shared/QuestionBank/cet6-2022-2026.json
+        buildPhase: resources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.chen.WriteBench.ipad
+        CODE_SIGN_IDENTITY: "Apple Development"
+        TARGETED_DEVICE_FAMILY: "2"
+        SUPPORTS_MACCATALYST: NO
+        SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD: NO
+        CODE_SIGN_ENTITLEMENTS: ""
+        ENABLE_HARDENED_RUNTIME: NO
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_CFBundleDisplayName: WriteBench
+    info:
+      path: platforms/ipad/Info.plist
+      properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        UILaunchScreen: {}
+        UIApplicationSupportsIndirectInputEvents: true
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations: {}
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationPortraitUpsideDown
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+  WriteBenchPadTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources:
+      - platforms/ipad/WriteBenchPadTests
+      - path: Documentation/TestImages/ocr-sample-1.png
+        buildPhase: resources
+    dependencies:
+      - target: WriteBenchPad
+    settings:
+      base:
+        CODE_SIGN_ENTITLEMENTS: ""
+        TARGETED_DEVICE_FAMILY: "2"
+  WriteBenchPadUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "18.0"
+    sources: [platforms/ipad/WriteBenchPadUITests]
+    dependencies:
+      - target: WriteBenchPad
+    settings:
+      base:
+        CODE_SIGN_ENTITLEMENTS: ""
+        TARGETED_DEVICE_FAMILY: "2"
 schemes:
+  WriteBenchPad:
+    build:
+      targets:
+        WriteBenchPad: all
+    test:
+      targets: [WriteBenchPadTests, WriteBenchPadUITests]
   WriteBench:
     build:
       targets:
