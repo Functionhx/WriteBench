@@ -45,6 +45,26 @@ static class SelfTest
             throw new Exception("Missing fields accepted");
         await ExtendedTests(task, response);
         var window = new MainWindow(preview: true); window.CheckUI();
+        var bank = new CETQuestionBank(Path.Combine(Path.GetTempPath(), "WriteBench-bank-test-" + Guid.NewGuid()));
+        var entries = bank.Entries();
+        Assert(entries.Length == 66 && entries.Count(e => e.Task == "cet6Writing") == 33 && entries.All(e => !e.HasPrompt), "CET source index incomplete/playable");
+        string bankDir = Path.Combine(Path.GetTempPath(), "WriteBench-import-test-" + Guid.NewGuid());
+        try {
+            var imports = new CETQuestionBank(bankDir);
+            var sample = new CETBankEntry("fixture-a", "cet6Writing", 2024, 6, 1, "导入测试", "Write about careful planning.", "https://example.com/fixture", "userImported");
+            byte[] Data(params CETBankEntry[] rows) => JsonSerializer.SerializeToUtf8Bytes(new CETBankDocument(1, rows), JSON.Options);
+            Assert(imports.Import(Data(sample, sample with { Id = "fixture-b" })) == 2, "CET batch import failed");
+            byte[] before = File.ReadAllBytes(Path.Combine(bankDir, "cet6-custom.json"));
+            bool invalidRejected = false;
+            try { imports.Import(Data(sample with { Prompt = "" })); } catch { invalidRejected = true; }
+            Assert(invalidRejected && before.SequenceEqual(File.ReadAllBytes(Path.Combine(bankDir, "cet6-custom.json"))), "Incomplete bank mutated stored data");
+            imports.Import(Data(sample with { Prompt = "Updated original practice question." }));
+            Assert(imports.Entries().Count(e => e.HasPrompt) == 2 && imports.Entries().Single(e => e.Id == sample.Id).Prompt == "Updated original practice question.", "Import update lost other questions");
+            foreach (var invalid in new[] { sample with { Task = "kaoyanLarge" }, sample with { SourceUrl = "file:///etc/passwd" }, sample with { Year = 2026, Month = 12 } }) {
+                invalidRejected = false; try { CETQuestionBank.Decode(Data(invalid), true, new DateTime(2026, 10, 3)); } catch { invalidRejected = true; }
+                Assert(invalidRejected, "Invalid bank metadata accepted");
+            }
+        } finally { if (Directory.Exists(bankDir)) Directory.Delete(bankDir, true); }
         var fixture = Path.Combine(AppContext.BaseDirectory, "ocr-fixture.png");
         if (File.Exists(fixture))
         {
@@ -54,7 +74,7 @@ static class SelfTest
             if (!page.GetText().Contains("Alex", StringComparison.OrdinalIgnoreCase))
                 throw new Exception("OCR fixture recognition failed");
         }
-        File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "self-test-passed.txt"), "Domain, aggregation, schema compatibility, bounded retries, interrupted streams, HTTP authorization, encrypted credentials, timer, native WPF editor/undo/Tab/progress and real OCR passed.");
+        File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "self-test-passed.txt"), "Domain, aggregation, schema compatibility, bounded retries, interrupted streams, HTTP authorization, encrypted credentials, timer, native WPF editor/undo/Tab/progress CET question-bank import/source-index checks, and real OCR passed.");
     }
     static void Assert(bool condition, string name) { if (!condition) throw new Exception(name); }
     static async Task ExtendedTests(ExamTask task, JudgeResponse valid)

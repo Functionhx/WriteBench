@@ -130,6 +130,9 @@ public sealed partial class MainWindow : Window
         Content = grid;
         switch (page)
         {
+            case "CETLibrary":
+                CETLibrary();
+                break;
             case "History":
                 History();
                 break;
@@ -150,6 +153,22 @@ public sealed partial class MainWindow : Window
                 break;
         }
     }
+    void CETLibrary()
+    {
+        Heading("近五年六级题库", "2022–2026 · 来源索引与可练习正文分开显示，套次沿用来源编号。");
+        content.Children.Add(Button("批量导入题库 JSON", () => {
+            var picker = new OpenFileDialog { Filter = "题库 JSON|*.json" }; if (picker.ShowDialog(this) != true) return;
+            int count = new CETQuestionBank().Import(File.ReadAllBytes(picker.FileName)); Message($"已导入 {count} 道完整题目；同 ID 更新，其余保留。"); Render();
+        }, true));
+        try {
+            foreach (var entry in new CETQuestionBank().Entries().Where(entry => entry.Task == task.Id)) {
+                var card = Card(content); card.Children.Add(Text(entry.Title, 18));
+                card.Children.Add(Text(entry.HasPrompt ? "用户导入 · 可练习" : "第三方来源索引 · 未核对正文，不能直接答题", 12, Muted));
+                if (entry.HasPrompt) { card.Children.Add(Text(entry.Prompt, 14)); card.Children.Add(Button("使用这道题", () => { question = entry.Prompt; page = "Write"; SaveDraft(); Render(); })); }
+                card.Children.Add(Button("打开来源资料", () => System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(entry.SourceUrl) { UseShellExecute = true })));
+            }
+        } catch (Exception e) { content.Children.Add(Text(e.Message, 14)); }
+    }
     void Preparation()
     {
         Heading(task.Translation ? "准备翻译" : "准备写作", task.Translation ? (task.Chinese ? "英译汉 · 译义准确，表达自然。" : "汉译英 · 忠实完整地传达原文。") : "选好题目，开始一段安静的写作。");
@@ -157,6 +176,7 @@ public sealed partial class MainWindow : Window
         foreach (var t in ExamTask.All.Where(t => t.Exam == task.Exam))
             sub.Children.Add(Button(t.Title, () => SelectTask(t), t == task));
         content.Children.Add(sub);
+        if (task.Exam == "CET-6 六级") content.Children.Add(Button("近五年六级题库 / 批量导入", () => { page = "CETLibrary"; Render(); }));
         var c = Card(content);
         c.Children.Add(Text("题目 · 原创练习 / 自行导入", 13, Muted));
         var q = Input(question, 210);
@@ -340,10 +360,13 @@ public sealed partial class MainWindow : Window
         if (judgeStatus.Count != 3 || !editor!.IsReadOnly) throw new Exception("Grading UI did not lock answer/show progress");
         grading = false; Render();
         if (writingTimer.Running) throw new Exception("Failed grading resumed timer");
+        PreviewPage("CETLibrary");
+        if (content.Children.Count < 33) throw new Exception("CET source index missing from WPF library");
         Close();
     }
     internal void PreviewPage(string destination)
     {
+        if (destination == "CETLibrary") task = ExamTask.All.First(t => t.Id == "cet6Writing");
         answering = destination == "answer";
         if (answering) { essay = "Notice\r\n\r\n    Our university library is recruiting student volunteers.\r\n\r\n                                         University Library"; writingTimer.Reset(600); }
         else page = destination;

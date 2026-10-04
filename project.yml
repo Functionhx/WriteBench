@@ -19,6 +19,8 @@ targets:
     platform: macOS
     sources:
       - WriteBench
+      - path: Shared/QuestionBank/cet6-2022-2026-index.json
+        buildPhase: resources
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.chen.WriteBench
