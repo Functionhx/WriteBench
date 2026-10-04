@@ -1,4 +1,4 @@
-# WriteBench for Windows 1.9.2
+# WriteBench for Windows 1.9.3
 
 Native WPF / C# application, .NET 10, self-contained Windows x64. Extract the entire ZIP and run `WriteBench.exe`; keep all adjacent files and OCR data together. No separate .NET installation is required.
 
