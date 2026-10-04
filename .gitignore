@@ -31,3 +31,7 @@ Documentation/codex-live-check.json
 *.iml
 
 .codex-build/
+
+.codex-ipad/
+
+.codex-ipad-device/

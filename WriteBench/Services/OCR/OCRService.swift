@@ -2,7 +2,9 @@ import Foundation
 import Vision
 import ImageIO
 import UniformTypeIdentifiers
+#if os(macOS)
 import AppKit
+#endif
 
 struct OCRPage: Identifiable, Sendable {
     var id = UUID()
@@ -66,6 +68,7 @@ struct VisionOCRService: Sendable {
     }
 }
 
+#if os(macOS)
 @MainActor enum ImageImporter {
     static func selectImages() async -> [URL] {
         let panel = NSOpenPanel()
@@ -78,3 +81,5 @@ struct VisionOCRService: Sendable {
         return await panel.begin() == .OK ? panel.urls : []
     }
 }
+
+#endif

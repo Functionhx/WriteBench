@@ -160,3 +160,8 @@ macOS 自动化测试覆盖 87 个案例，Android 有 5 个领域测试与 2 �
 <p align="center">WriteBench · 一次练习，一份原稿，一次认真重写。</p>
 
 考研翻译报告支持“意群精讲”：词汇、结构与翻译要点、分组译文及完整译文组合；英一只讲解作答划线句，英二按全文句子展开。点击交卷即暂停计时，提交受阻时可点击继续作答恢复。
+
+
+### iPadOS 开发版
+
+已新增 iPad 专用原生 target `WriteBenchPad`（iPadOS 18+），支持横竖屏答题、PencilKit 手写与 OCR 校对、内置六级题库、DeepSeek 评阅及与 macOS 兼容的备份。详见 [iPad 开发和安装说明](platforms/ipad/README.md)。实体 iPad 安装需要自己的 Apple 开发签名，当前尚无公开可安装的 IPA。

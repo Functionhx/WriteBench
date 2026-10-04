@@ -21,6 +21,8 @@ struct BackupArchive: Codable {
         var parentSessionID: UUID?, questionImage: Data?, sourceImages: Data?
     }
     struct DraftRecord: Codable {
+        var richText: Data? = nil
+        var pencilDrawing: Data? = nil
         var subtype: String, question: String, questionLabel: String, essay: String, elapsed: Double, inputMode: String, updatedAt: Date
         var rewriteSessionID: UUID?, questionImage: Data?, sourceImages: Data?
     }
@@ -59,7 +61,7 @@ struct BackupSummary: Equatable {
                       questionImage: $0.questionImage, sourceImages: $0.sourceImages)
             },
             drafts: try context.fetch(FetchDescriptor<WritingDraft>()).map {
-                .init(subtype: $0.subtype, question: $0.question, questionLabel: $0.questionLabel, essay: $0.essay, elapsed: $0.elapsed,
+                .init(richText: $0.richText, pencilDrawing: $0.pencilDrawing, subtype: $0.subtype, question: $0.question, questionLabel: $0.questionLabel, essay: $0.essay, elapsed: $0.elapsed,
                       inputMode: $0.inputMode, updatedAt: $0.updatedAt, rewriteSessionID: $0.rewriteSessionID, questionImage: $0.questionImage, sourceImages: $0.sourceImages)
             },
             questions: try context.fetch(FetchDescriptor<SavedQuestion>()).map {
@@ -111,7 +113,7 @@ struct BackupSummary: Equatable {
             if drafts[record.subtype] == nil { context.insert(draft) }
             draft.question = record.question; draft.questionLabel = record.questionLabel; draft.essay = record.essay; draft.elapsed = record.elapsed
             draft.inputMode = record.inputMode; draft.updatedAt = record.updatedAt; draft.rewriteSessionID = record.rewriteSessionID
-            draft.questionImage = record.questionImage; draft.sourceImages = record.sourceImages
+            draft.questionImage = record.questionImage; draft.sourceImages = record.sourceImages; draft.richText = record.richText; draft.pencilDrawing = record.pencilDrawing
             summary.added += 1
         }
         let questionIDs = Set(try context.fetch(FetchDescriptor<SavedQuestion>()).map(\.id))
