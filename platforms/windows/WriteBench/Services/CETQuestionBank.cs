@@ -23,14 +23,14 @@ public sealed class CETQuestionBank(string? directory = null)
                 || item.Year < 2022 || item.Year > 2026 || !new[] { 3, 6, 9, 12 }.Contains(item.Month) || item.Set < 1 || item.Set > 3
                 || new DateTime(item.Year, item.Month, 1) > (now ?? DateTime.Now) || string.IsNullOrWhiteSpace(item.Title) || item.Prompt == null || item.Prompt.Length > 100_000
                 || !Uri.TryCreate(item.SourceUrl, UriKind.Absolute, out var uri) || !new[] { "http", "https" }.Contains(uri.Scheme) || string.IsNullOrEmpty(uri.Host)
-                || !new[] { "sourceIndex", "userImported" }.Contains(item.Verification)) throw new Exception("题目年份、题型、套次、来源或标识无效");
+                || !new[] { "sourceIndex", "userImported", "providedDocument" }.Contains(item.Verification)) throw new Exception("题目年份、题型、套次、来源或标识无效");
             if (requirePrompts && !item.HasPrompt) throw new Exception($"题目 {item.Title} 只有来源索引，没有正文，不能作为练习题导入");
         }
         return document.Questions;
     }
     public CETBankEntry[] Entries()
     {
-        var bundled = Decode(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "QuestionBank", "cet6-2022-2026-index.json")), false);
+        var bundled = Decode(File.ReadAllBytes(Path.Combine(AppContext.BaseDirectory, "QuestionBank", "cet6-2022-2026.json")), false);
         var custom = File.Exists(FileName) ? Decode(File.ReadAllBytes(FileName), true) : [];
         return bundled.Concat(custom).GroupBy(item => item.Id).Select(group => group.Last()).OrderByDescending(item => item.Year).ThenByDescending(item => item.Month).ThenBy(item => item.Set).ToArray();
     }

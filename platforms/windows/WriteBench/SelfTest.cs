@@ -47,7 +47,7 @@ static class SelfTest
         var window = new MainWindow(preview: true); window.CheckUI();
         var bank = new CETQuestionBank(Path.Combine(Path.GetTempPath(), "WriteBench-bank-test-" + Guid.NewGuid()));
         var entries = bank.Entries();
-        Assert(entries.Length == 66 && entries.Count(e => e.Task == "cet6Writing") == 33 && entries.All(e => !e.HasPrompt), "CET source index incomplete/playable");
+        Assert(entries.Length == 66 && entries.Count(e => e.Task == "cet6Writing") == 33 && entries.All(e => e.HasPrompt && e.Verification == "providedDocument"), "CET full-text bank incomplete");
         string bankDir = Path.Combine(Path.GetTempPath(), "WriteBench-import-test-" + Guid.NewGuid());
         try {
             var imports = new CETQuestionBank(bankDir);
@@ -59,7 +59,7 @@ static class SelfTest
             try { imports.Import(Data(sample with { Prompt = "" })); } catch { invalidRejected = true; }
             Assert(invalidRejected && before.SequenceEqual(File.ReadAllBytes(Path.Combine(bankDir, "cet6-custom.json"))), "Incomplete bank mutated stored data");
             imports.Import(Data(sample with { Prompt = "Updated original practice question." }));
-            Assert(imports.Entries().Count(e => e.HasPrompt) == 2 && imports.Entries().Single(e => e.Id == sample.Id).Prompt == "Updated original practice question.", "Import update lost other questions");
+            Assert(imports.Entries().Count(e => e.Id.StartsWith("fixture-")) == 2 && imports.Entries().Single(e => e.Id == sample.Id).Prompt == "Updated original practice question.", "Import update lost other questions");
             foreach (var invalid in new[] { sample with { Task = "kaoyanLarge" }, sample with { SourceUrl = "file:///etc/passwd" }, sample with { Year = 2026, Month = 12 } }) {
                 invalidRejected = false; try { CETQuestionBank.Decode(Data(invalid), true, new DateTime(2026, 10, 3)); } catch { invalidRejected = true; }
                 Assert(invalidRejected, "Invalid bank metadata accepted");

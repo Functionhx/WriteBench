@@ -29,13 +29,13 @@
 		473B2ECB957707EDB2BF41AA /* BackgroundGradingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA8E73D997ED19A98227B24C /* BackgroundGradingView.swift */; };
 		4B7B1CDF7FADBE73B96E26DA /* kaoyan_english1_translation.md in Resources */ = {isa = PBXBuildFile; fileRef = AD3CEB6EC11C595CA1EA79D6 /* kaoyan_english1_translation.md */; };
 		51899521D61CB025A5559EC5 /* LocalProcessRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 100F5B726342F502CA8C4207 /* LocalProcessRunner.swift */; };
-		52D947565422EE245913DE21 /* cet6-2022-2026-index.json in Resources */ = {isa = PBXBuildFile; fileRef = 63ABA3E9807196933476EF75 /* cet6-2022-2026-index.json */; };
 		5317F309ED9004BD4665C0DC /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 37444757CFEC8F67705A2D6C /* Assets.xcassets */; };
 		54D5279B986C5DBEA37BA5C7 /* OCRConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F54C82E0AE1ACA592616CDDB /* OCRConfirmationView.swift */; };
 		55C7907B2F577F01BC57A08B /* ReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F9DB3748FBE72E213C6EB37 /* ReviewView.swift */; };
 		55E01FD08D907D18E2AFCBFC /* WritingStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C00C1A68BA4227431C3B8884 /* WritingStore.swift */; };
 		57B1584FB0F0DC411801C7D5 /* WritingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3788E5EB782131E544DDEDC /* WritingView.swift */; };
 		611D1CBBEE2017C06DCD6D8D /* GradingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 634F608AF0DF72D3DE51E438 /* GradingService.swift */; };
+		6A2D61FFBE7F968DBCFB1164 /* cet6-2022-2026.json in Resources */ = {isa = PBXBuildFile; fileRef = 445C1E2A61051C152970E26E /* cet6-2022-2026.json */; };
 		6C1F7BEC5994E87DFA1CEF27 /* DeepSeekClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A399A503863E6199B340A50C /* DeepSeekClient.swift */; };
 		6C3E278AD86905C7C0A63BCE /* QuestionText.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD0DD31CC0B614898B36ED76 /* QuestionText.swift */; };
 		6EF13FD59119BAB281533752 /* TranslationLessonCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11CD6DC48ADA2A2066B58A3 /* TranslationLessonCard.swift */; };
@@ -119,6 +119,7 @@
 		405A85F2A07E72B5AD277D96 /* ielts_task1.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = ielts_task1.md; sourceTree = "<group>"; };
 		419DE9ABE9E26F14128B9B1E /* HistoryFolderEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryFolderEditor.swift; sourceTree = "<group>"; };
 		4391A8E13E5C7A35D0A1467A /* MistakesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MistakesView.swift; sourceTree = "<group>"; };
+		445C1E2A61051C152970E26E /* cet6-2022-2026.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "cet6-2022-2026.json"; sourceTree = "<group>"; };
 		4BCC37FAB6E0DDC543B0D48B /* DeepSeekStreaming.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepSeekStreaming.swift; sourceTree = "<group>"; };
 		4FAD6385C4872B3E80D4B00C /* CETQuestionBankTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CETQuestionBankTests.swift; sourceTree = "<group>"; };
 		51A76CC13C7CABACEC80CBAE /* WindowImmersionBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowImmersionBridge.swift; sourceTree = "<group>"; };
@@ -126,7 +127,6 @@
 		5AEB65E44D0601AEC6053865 /* Exam.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Exam.swift; sourceTree = "<group>"; };
 		6211317C38F78901403EE347 /* TranslationLesson.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TranslationLesson.swift; sourceTree = "<group>"; };
 		634F608AF0DF72D3DE51E438 /* GradingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GradingService.swift; sourceTree = "<group>"; };
-		63ABA3E9807196933476EF75 /* cet6-2022-2026-index.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "cet6-2022-2026-index.json"; sourceTree = "<group>"; };
 		650B4D62F506EDDC71D6396A /* cet6_writing.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = cet6_writing.md; sourceTree = "<group>"; };
 		679F1D25813DBB4821B089EF /* WriteBenchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WriteBenchTests.swift; sourceTree = "<group>"; };
 		6A7B637179FC6E271F31DBF4 /* kaoyan_english1_small.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = kaoyan_english1_small.md; sourceTree = "<group>"; };
@@ -279,7 +279,7 @@
 		85C04166008095CC4B9B2FA4 /* QuestionBank */ = {
 			isa = PBXGroup;
 			children = (
-				63ABA3E9807196933476EF75 /* cet6-2022-2026-index.json */,
+				445C1E2A61051C152970E26E /* cet6-2022-2026.json */,
 			);
 			name = QuestionBank;
 			path = Shared/QuestionBank;
@@ -537,7 +537,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5317F309ED9004BD4665C0DC /* Assets.xcassets in Resources */,
-				52D947565422EE245913DE21 /* cet6-2022-2026-index.json in Resources */,
+				6A2D61FFBE7F968DBCFB1164 /* cet6-2022-2026.json in Resources */,
 				361B2B881C01F86CC3A784DC /* cet6_translation.md in Resources */,
 				D3F29CFA674B891722D5B739 /* cet6_writing.md in Resources */,
 				DEBA962949C4AADDFCB2C5D0 /* ielts_task1.md in Resources */,
@@ -692,7 +692,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -707,7 +707,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.9.1;
+				MARKETING_VERSION = 1.9.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -788,7 +788,7 @@
 				CODE_SIGN_IDENTITY = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -809,7 +809,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.9.1;
+				MARKETING_VERSION = 1.9.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;

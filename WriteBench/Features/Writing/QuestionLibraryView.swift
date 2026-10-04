@@ -44,7 +44,7 @@ struct QuestionLibraryView: View {
             Item(id: $0.id.uuidString, task: currentTask, title: $0.title, prompt: $0.prompt, image: $0.image, year: $0.year, label: $0.label, saved: $0)
         }
         case .cet: all = cetEntries.filter { $0.task == currentTask.rawValue }.map {
-            Item(id: $0.id, task: currentTask, title: $0.title, prompt: $0.prompt, year: $0.year, label: $0.hasPrompt ? "用户导入 · 可练习" : "第三方来源索引 · 无正文", sourceURL: URL(string: $0.sourceUrl))
+            Item(id: $0.id, task: currentTask, title: $0.title, prompt: $0.prompt, year: $0.year, label: $0.hasPrompt ? ($0.verification == "providedDocument" ? "真题 · 已从文件核对" : "用户导入 · 可练习") : "第三方来源索引 · 无正文", sourceURL: URL(string: $0.sourceUrl))
         }
         }
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -58,7 +58,7 @@ struct QuestionLibraryView: View {
         let index = practiceIndex, visible = items(index)
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                SectionHeading(title: "题库", subtitle: "内置题目均为原创练习；导入或识别的题目可保存到我的题库。")
+                SectionHeading(title: "题库", subtitle: "原创练习与近五年六级真题；导入或识别的题目可保存到我的题库。")
                 Spacer()
                 IconButton(symbol: "xmark", help: "Close") { dismiss() }
             }
@@ -85,7 +85,7 @@ struct QuestionLibraryView: View {
             }.padding(10).background(.white, in: RoundedRectangle(cornerRadius: 10)).overlay(RoundedRectangle(cornerRadius: 10).stroke(WB.line))
             if store.task.exam == .cet6 {
                 HStack {
-                    Text("2022–2026 · 有正文才能练习；套次沿用来源编号。").font(.system(size: 12)).foregroundStyle(WB.secondary)
+                    Text("2022–2026 · 写作、翻译各 33 题 · 套次沿用资料编号。").font(.system(size: 12)).foregroundStyle(WB.secondary)
                     Spacer()
                     Button("批量导入题库 JSON") { importCETBank() }.buttonStyle(QuietButtonStyle())
                 }
@@ -106,7 +106,7 @@ struct QuestionLibraryView: View {
             }
             if source == .saved { saveBar }
             if let error { Text(error).foregroundStyle(WB.amber).font(.system(size: 12)) }
-        }.padding(28).frame(width: 900, height: 640).background(WB.canvas).onAppear { reloadCETBank() }
+        }.padding(28).frame(width: 900, height: 640).background(WB.canvas).onAppear { reloadCETBank(); if store.task.exam == .cet6 { source = .cet } }
     }
     private func reloadCETBank() {
         do { cetEntries = try CETQuestionBank.entries() } catch { self.error = error.localizedDescription }

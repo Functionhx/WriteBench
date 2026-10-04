@@ -47,10 +47,12 @@ WriteBench 把练习收敛为一条清晰的路径：选题、作答、评阅、
 | 平台 | 安装方式 | 当前状态 |
 | :--- | :--- | :--- |
 | **macOS 15+** | 下载 ZIP / DMG，将 WriteBench.app 放入 Applications | 原生 SwiftUI，Apple silicon + Intel |
-| **Windows 11 x64** | [下载便携 ZIP](https://github.com/Functionhx/WriteBench/releases/download/v1.9.1/WriteBench-1.9.1-Windows-x64.zip)，完整解压后运行 WriteBench.exe | 原生 WPF / .NET 10 · 1.9.1 |
+| **Windows 11 x64** | [下载便携 ZIP](https://github.com/Functionhx/WriteBench/releases/download/v1.9.2/WriteBench-1.9.2-Windows-x64.zip)，完整解压后运行 WriteBench.exe | 原生 WPF / .NET 10 · 1.9.2 |
 | **Android 13+** | [下载签名 APK](https://github.com/Functionhx/WriteBench/releases/download/v1.3.0/WriteBench-0.1.0-Android.apk)，在手机安装 | 原生 Android Views · 0.1 预览版 |
 
 macOS 当前是本地 ad-hoc 签名版本，尚未经过 Apple Developer ID 公证；Windows 预览版尚未进行 Authenticode 签名。Windows OCR 需要 Microsoft Visual C++ x64 运行库，详见[平台说明](platforms/windows/README.md)。公开仓库与安装包不包含 API Key、Codex 登录信息或用户作文。
+
+六级写作、翻译现已在 Windows 与 macOS 内置 2022–2026 年完整题库，各 33 题；包含 2022 年 9 月与 2023 年 3 月场次。原题从用户提供的 PDF／Word 交叉提取，套次沿用资料编号。详见[题库与核对记录](Shared/QuestionBank/README.md)。
 
 ## 开始使用
 
@@ -137,7 +139,7 @@ platforms/android/   Android Studio 项目与手机界面
 scripts/             构建、图标生成与显式联调脚本
 ```
 
-macOS 自动化测试覆盖 82 个案例，Android 有 5 个领域测试与 2 个实际设备服务测试；Windows 通过评分、持久化、字段校验及实际 OCR 自检。GPT-6 Astra/MAX 已通过实际 Swift 子进程完成样例评卷；DeepSeek 已验证官方模型接口连接。后台、流式输出及版本路径已用隔离测试验证；本次未执行完整付费三评，需用户填入有效 Key 后使用。
+macOS 自动化测试覆盖 87 个案例，Android 有 5 个领域测试与 2 个实际设备服务测试；Windows 通过评分、持久化、字段校验及实际 OCR 自检。GPT-6 Astra/MAX 已通过实际 Swift 子进程完成样例评卷；DeepSeek 已验证官方模型接口连接。后台、流式输出及版本路径已用隔离测试验证；本次未执行完整付费三评，需用户填入有效 Key 后使用。
 
 <details>
 <summary><strong>更多文档</strong></summary>

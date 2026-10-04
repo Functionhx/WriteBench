@@ -8,13 +8,15 @@ private func entry(_ id: String = "fixture", prompt: String = "Write an essay ab
 private func bankData(_ entries: [CETBankEntry], version: Int = 1) throws -> Data {
     try JSONEncoder().encode(CETBankDocument(schemaVersion: version, questions: entries))
 }
-@Test func cetSourceIndexCoverage() throws {
+@Test func cetProvidedPaperCoverage() throws {
     let folder = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
     let entries = try CETQuestionBank.entries(storage: folder.appendingPathComponent("empty.json"))
     #expect(entries.count == 66)
     #expect(entries.filter { $0.task == "cet6Writing" }.count == 33)
     #expect(entries.filter { $0.task == "cet6Translation" }.count == 33)
-    #expect(entries.allSatisfy { !$0.hasPrompt && $0.verification == "sourceIndex" })
+    #expect(entries.allSatisfy { $0.hasPrompt && $0.verification == "providedDocument" })
+    #expect(Set(entries.map(\.prompt)).count == 66)
+    #expect(entries.allSatisfy { $0.prompt.hasPrefix("Directions:") && !$0.prompt.contains("懒笔记") && !$0.prompt.contains("参考范文") })
     #expect(entries.contains { $0.year == 2022 && $0.month == 9 })
     #expect(entries.contains { $0.year == 2023 && $0.month == 3 })
     #expect(!entries.contains { $0.year == 2026 && $0.month == 12 })

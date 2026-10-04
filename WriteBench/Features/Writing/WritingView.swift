@@ -124,7 +124,9 @@ struct WritingView: View {
     }
     private func randomQuestion() {
         let index = PracticeIndex(sessions), current = QuestionBank.key(store.question)
-        let candidates = QuestionBank.questions(for: store.task).filter { QuestionBank.key($0.prompt) != current }
+        let bank = QuestionBank.questions(for: store.task)
+        let real = bank.filter { $0.id.hasPrefix("cet6-") }
+        let candidates = (real.isEmpty ? bank : real).filter { QuestionBank.key($0.prompt) != current }
         guard let pick = candidates.filter({ index.attempts($0.task, $0.prompt).isEmpty }).randomElement() ?? candidates.randomElement() else { return }
         store.useQuestion(pick.prompt, title: pick.title, task: pick.task)
     }

@@ -1,39 +1,31 @@
-# 六级 2022–2026 题库数据
+# 六级 2022–2026 真题库
 
-Windows 和 macOS 使用同一个 `cet6-2022-2026-index.json` 文件。
+Windows 和 macOS 内置同一份 `cet6-2022-2026.json`：**33 套，写作 33 题、翻译 33 题，均包含完整正文，可直接选题作答。**
 
-**目前是第三方来源索引，包含写作 33 条、翻译 33 条，不包含真题正文，不能直接作为练习题。** 目录来自以下页面，并保留来源的套次编号，尚未逐卷核对正文、日期或题目真实性：
+正文提取自用户提供的本机真题 PDF 与 Word 文件。每套的写作题干和翻译题段落均经过 PDF／DOCX 交叉对比，移除了页眉、页脚、听力说明和排版断行，未混入答案或范文。保留写作题的指定开头、150–200 词要求及其他指令。中文词内的排版空格已清理。
 
-- https://english-exam.lazynote.cn/cet6/sections/writing/
-- https://english-exam.lazynote.cn/cet6/sections/chinese-english-translation/
+少数资料存在英文词内断空格及标点空格问题，如 `t o`、`sen tence`；已对照 PDF 原页修复，并在条目的 `layoutCorrections` 中记录。未擅自改变指定句子的语法或观点。
 
-范围：2022、2023、2024、2025、2026；2026 仅列 6 月。包含目录中的 2022 年 9 月与 2023 年 3 月条目。不能将来源编号视为所有机构一致使用的官方套次编号。
+范围：2022–2025 各已收录场次，以及 2026 年 6 月；包括 2022 年 9 月与 2023 年 3 月场次。套次沿用用户资料／来源网站编号，不保证其他机构的套次编号相同。资料核对依据为用户提供的文件，不表示这些重排资料是考试院发布的原版扫描件。
 
-## 完整正文批量导入
+`cet6-import-audit.json` 保存每套 PDF、Word 的 SHA-256、文件名、交叉核对结果和题干长度。原始 PDF／Word 未复制进安装包。
 
-从用户提供的 PDF、图片或题目文件中提取并校对题目后，生成相同 JSON 格式：
+## 使用
 
-```json
-{
-  "schemaVersion": 1,
-  "questions": [
-    {
-      "id": "cet6-2024-06-1-cet6Writing",
-      "task": "cet6Writing",
-      "year": 2024,
-      "month": 6,
-      "set": 1,
-      "title": "2024 年 6 月 · 来源第 1 套 · 写作",
-      "prompt": "这里填写从你提供的资料提取并校对后的完整题干",
-      "sourceUrl": "https://example.com/source",
-      "verification": "userImported"
-    }
-  ]
-}
+macOS：六级 → 写作／翻译 → 题库，默认显示近五年六级真题；“随机抽题”优先从六级真题抽取，并优先选未练习题目。
+
+Windows：六级 → 写作／翻译 → 随机真题，或“近五年六级题库／批量导入”逐题选择。
+
+## 批量导入与复核
+
+两平台接受相同 JSON 格式，顶层为 `schemaVersion: 1` 和 `questions` 数组；题目字段为 `id`、`task`、`year`、`month`、`set`、`title`、`prompt`、`sourceUrl`、`verification`。题型为 `cet6Writing` 或 `cet6Translation`；用户导入标识为 `userImported`，本次从资料核对的内置题为 `providedDocument`。
+
+缺正文、重复 ID、未知题型、无效来源、未来考试日期或不支持的数据版本会整批拒绝，原题库不变。相同 ID 更新，其余已有题目保留。内置题不会修改用户此前手动保存的题目和作答。
+
+重新提取（需本机有 Poppler 的 `pdftotext`）：
+
+```sh
+python3 scripts/import-cet6.py --source '/path/to/六级真题2022-2026'
 ```
 
-翻译的 `task` 为 `cet6Translation`。来源链接应指向所用资料的出处，不应伪造。导入文件必须全部有正文；仅含索引、重复 ID、未知题型、无效来源、未来考试日期或不支持的数据版本会整体拒绝，原题库不变。相同 ID 在后续导入中更新，其余已有条目保留。
-
-macOS：题库 → 近五年六级 → 批量导入题库 JSON。Windows：六级 → 写作／翻译 → 近五年六级题库／批量导入。
-
-用户题库只保存在本机：macOS `~/Library/Application Support/WriteBench/QuestionBank/cet6-custom.json`；Windows `%LOCALAPPDATA%/WriteBench/QuestionBank/cet6-custom.json`。两平台使用同一种格式，但不会自动跨设备同步。macOS 原有“我的题库”备份不会自动包含这个独立 JSON 文件；迁移时应另行复制它。
+额外导入题目保存于 macOS `~/Library/Application Support/WriteBench/QuestionBank/cet6-custom.json`，Windows `%LOCALAPPDATA%/WriteBench/QuestionBank/cet6-custom.json`。同一 JSON 可在两平台导入，但不自动跨设备同步。macOS 现有“我的题库”备份不包含此独立 JSON，迁移时应另行复制它。

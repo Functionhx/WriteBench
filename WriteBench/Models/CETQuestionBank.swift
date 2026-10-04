@@ -26,7 +26,7 @@ struct CETBankDocument: Codable, Sendable {
                   let date = calendar.date(from: DateComponents(year: item.year, month: item.month, day: 1)), date <= now,
                   !item.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, item.prompt.count <= 100_000,
                   let url = URL(string: item.sourceUrl), ["https", "http"].contains(url.scheme ?? ""), url.host != nil,
-                  ["sourceIndex", "userImported"].contains(item.verification)
+                  ["sourceIndex", "userImported", "providedDocument"].contains(item.verification)
             else { throw CETBankError.invalid("题目 \(item.id) 的年份、题型、套次、来源或标识无效") }
             if requirePrompts && !item.hasPrompt { throw CETBankError.invalid("题目 \(item.title) 只有来源索引，没有正文，不能作为练习题导入") }
         }
@@ -44,7 +44,7 @@ enum CETQuestionBank {
         return try JSONDecoder().decode(CETBankDocument.self, from: data).validated(requirePrompts: requirePrompts)
     }
     static func entries(storage: URL = storage) throws -> [CETBankEntry] {
-        guard let url = Bundle.main.url(forResource: "cet6-2022-2026-index", withExtension: "json") else { throw CETBankError.invalid("内置来源索引未找到") }
+        guard let url = Bundle.main.url(forResource: "cet6-2022-2026", withExtension: "json") else { throw CETBankError.invalid("内置来源索引未找到") }
         let base = try decode(Data(contentsOf: url), requirePrompts: false)
         let custom = FileManager.default.fileExists(atPath: storage.path) ? try decode(Data(contentsOf: storage), requirePrompts: true) : []
         var values = Dictionary(uniqueKeysWithValues: base.map { ($0.id, $0) })
