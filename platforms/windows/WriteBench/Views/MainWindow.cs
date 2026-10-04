@@ -18,10 +18,13 @@ public sealed partial class MainWindow : Window
         store = new LocalStore(preview ? Path.Combine(Path.GetTempPath(), "WriteBench-preview-" + Guid.NewGuid()) : null);
         credentials = new Credentials(preview ? Path.Combine(Path.GetTempPath(), "WriteBench-preview-credentials-" + Guid.NewGuid()) : null);
         Title = "WriteBench";
-        Width = 1320;
-        Height = 870;
-        MinWidth = 960;
-        MinHeight = 650;
+        var workArea = SystemParameters.WorkArea;
+        double availableWidth = Math.Max(1, workArea.Width - 16);
+        double availableHeight = Math.Max(1, workArea.Height - 16);
+        Width = Math.Min(1320, availableWidth);
+        Height = Math.Min(870, availableHeight);
+        MinWidth = Math.Min(960, availableWidth);
+        MinHeight = Math.Min(650, availableHeight);
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         Icon = new BitmapImage(new Uri("pack://application:,,,/Assets/Icon.png"));
         settings = store.Read<Settings>("settings.json") ?? new();
@@ -120,6 +123,7 @@ public sealed partial class MainWindow : Window
         {
             var b = Button(exam, () => SelectTask(ExamTask.All.First(t => t.Exam == exam)), task.Exam == exam);
             b.Content = ExamLabel(exam, task.Exam == exam);
+            System.Windows.Automation.AutomationProperties.SetName(b, exam);
             tabs.Children.Add(b);
         }
         DockPanel.SetDock(tabs, Dock.Top);
