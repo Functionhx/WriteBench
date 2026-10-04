@@ -33,7 +33,8 @@ public sealed partial class MainWindow
     }
     void ConfirmOCR(string[] files, string[] texts, bool answer)
     {
-        var window = new Window { Owner = this, Title = "校对识别结果", Width = 1050, Height = 760, WindowStartupLocation = WindowStartupLocation.CenterOwner };
+        var workArea = SystemParameters.WorkArea;
+        var window = new Window { Owner = this, Title = "校对识别结果", Width = Math.Min(1050, Math.Max(1, workArea.Width - 16)), Height = Math.Min(760, Math.Max(1, workArea.Height - 16)), WindowStartupLocation = WindowStartupLocation.CenterOwner };
         var root = new DockPanel { Margin = new Thickness(24) };
         var footer = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(0, 20, 0, 0) };
         var checkedAll = new CheckBox { Content = "我已对照原图核对所有页面", VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 20, 0) };
